@@ -1,6 +1,6 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http";
-import { buildKmaHubUrl } from "../src/lib/api/requests";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
+import { buildKmaHubUrl } from "../src/lib/api/requests.js";
 
 const ASOS_ENDPOINT = "https://apihub.kma.go.kr/api/typ01/url/kma_sfctm2.php";
 

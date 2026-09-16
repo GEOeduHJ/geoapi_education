@@ -1,4 +1,4 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
 
 const configured = (name: string): boolean => Boolean(process.env[name]?.trim());
 
@@ -17,4 +17,3 @@ export default function handler(_request: ApiRequest, response: ApiResponse): vo
     checkedAt: new Date().toISOString(),
   });
 }
-

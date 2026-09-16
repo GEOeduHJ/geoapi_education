@@ -1,6 +1,6 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, upstreamUnavailable } from "../server/http";
-import { buildSgisAuthUrl } from "../src/lib/api/requests";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, upstreamUnavailable } from "../server/http.js";
+import { buildSgisAuthUrl } from "../src/lib/api/requests.js";
 
 const SGIS_BASE = "https://sgisapi.mods.go.kr/OpenAPI3";
 let tokenCache: { value: string; expiresAt: number } | undefined;

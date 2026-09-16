@@ -1,11 +1,11 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
 import {
   buildKosisMetadataUrl,
   parseKosisResponseText,
   parseKosisMetadataResponse,
   type KosisMetadataQuery,
-} from "../src/lib/kosis";
+} from "../src/lib/kosis.js";
 
 const SAFE_CODE = /^[A-Za-z0-9_.-]{1,40}$/;
 

@@ -1,11 +1,11 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
 import {
   buildKosisSearchUrl,
   parseKosisResponseText,
   parseKosisSearchResponse,
   type KosisSearchQuery,
-} from "../src/lib/kosis";
+} from "../src/lib/kosis.js";
 
 const SAFE_ORG_ID = /^[A-Za-z0-9_.-]{1,40}$/;
 const SORTS = new Set(["RANK", "DATE"]);

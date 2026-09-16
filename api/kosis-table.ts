@@ -1,5 +1,5 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
 import {
   buildKosisTableUrl,
   parseKosisResponseText,
@@ -7,7 +7,7 @@ import {
   summarizeKosisRecords,
   type KosisPeriod,
   type KosisTableQuery,
-} from "../src/lib/kosis";
+} from "../src/lib/kosis.js";
 
 const SAFE_CODE = /^[A-Za-z0-9_.-]{1,40}$/;
 const SAFE_CODE_LIST = /^[A-Za-z0-9_.-]{1,300}$/;

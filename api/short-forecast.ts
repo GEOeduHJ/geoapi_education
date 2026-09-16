@@ -1,6 +1,6 @@
-import type { ApiRequest, ApiResponse } from "../server/http";
-import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http";
-import { buildDataPortalUrl } from "../src/lib/api/requests";
+import type { ApiRequest, ApiResponse } from "../server/http.js";
+import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
+import { buildDataPortalUrl } from "../src/lib/api/requests.js";
 
 const FORECAST_ENDPOINT = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
 const digits = (value: string | undefined, length: number): boolean => Boolean(value && new RegExp(`^\\d{${length}}$`).test(value));
