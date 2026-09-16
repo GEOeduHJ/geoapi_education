@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { fetchKosisMetadata, searchKosisTables } from "../lib/kosis-client";
 import type { KosisMetadataRecord, KosisSearchResult } from "../lib/kosis";
+import { KosisTablePreview } from "./KosisTablePreview";
 
 type SearchStatus = "idle" | "loading" | "ready" | "error";
 type MetadataStatus = "idle" | "loading" | "ready" | "error";
@@ -96,6 +97,7 @@ export function KosisTableSearch() {
           <p>다음 단계에서 지도에 쓸 분류와 항목을 선택하고, 주기·기간을 입력해 제한 조회를 실행합니다.</p>
         </div>
       )}
+      {selected && metadataStatus === "ready" && <KosisTablePreview selected={selected} metadata={metadata} />}
       {results.length > 0 && (
         <div className="kosis-search-results" aria-label="KOSIS 통계표 검색 결과">
           {results.map((result, index) => (

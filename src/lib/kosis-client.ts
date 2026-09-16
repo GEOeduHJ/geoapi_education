@@ -1,4 +1,4 @@
-import type { KosisMetadataRecord, KosisSearchResult } from "./kosis";
+import type { KosisMetadataRecord, KosisPeriod, KosisRecord, KosisSearchResult, KosisTableMetadata } from "./kosis";
 
 interface KosisApiResponse<T> {
   data?: T[];
@@ -33,4 +33,39 @@ export function searchKosisTables(searchNm: string): Promise<{ data: KosisSearch
 export function fetchKosisMetadata(orgId: string, tblId: string): Promise<{ data: KosisMetadataRecord[]; error: string | null }> {
   const params = new URLSearchParams({ orgId, tblId });
   return requestKosis<KosisMetadataRecord>("/api/kosis-meta", params, "KOSIS 메타데이터");
+}
+
+export interface KosisTablePreviewQuery {
+  orgId: string;
+  tblId: string;
+  objL1: string;
+  objL2?: string;
+  objL3?: string;
+  objL4?: string;
+  objL5?: string;
+  objL6?: string;
+  objL7?: string;
+  objL8?: string;
+  itmId: string;
+  prdSe: KosisPeriod;
+  startPrdDe: string;
+  endPrdDe: string;
+  smblChk?: "Y" | "N";
+}
+
+interface KosisTableApiResponse extends KosisApiResponse<KosisRecord> {
+  metadata?: KosisTableMetadata;
+}
+
+export async function fetchKosisTable(query: KosisTablePreviewQuery): Promise<{ data: KosisRecord[]; metadata: KosisTableMetadata | null; error: string | null }> {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([name, value]) => params.set(name, String(value)));
+  try {
+    const response = await fetch(`/api/kosis-table?${params.toString()}`, { headers: { Accept: "application/json" } });
+    const payload = (await response.json()) as KosisTableApiResponse;
+    if (!response.ok) return { data: [], metadata: null, error: responseError(payload.error, response.status).replace("KOSIS 검색", "KOSIS 통계값") };
+    return { data: Array.isArray(payload.data) ? payload.data : [], metadata: payload.metadata ?? null, error: null };
+  } catch {
+    return { data: [], metadata: null, error: "KOSIS 통계값 서버에 연결하지 못했습니다." };
+  }
 }
