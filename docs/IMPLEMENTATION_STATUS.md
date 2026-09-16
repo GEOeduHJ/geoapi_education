@@ -94,7 +94,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 ## 검증 기록
 
 - `npm run typecheck`: 통과
-- `npm test`: 3개 테스트 파일·6개 테스트 통과
+- `npm test`: 6개 테스트 파일·13개 테스트 통과
 - `npm run build`: Vite production build 통과
 - `node scripts/smoke-api.mjs`: 7개 통과, KOSIS 통계표 요청 1개 보류, 실패 0개. Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함
 - 브라우저 확인: 홈, 자료 제작 허브, 2D 제작, 3D 제작, 탐구 허브, 3D 탐구 활동, API 상태 라우트 확인
