@@ -89,6 +89,45 @@ KOSIS URL 생성기는 같은 분류·항목 목록을 `+`로 이어 붙이는 �
 
 따라서 KOSIS는 로그인 기능이 아니라 반복 사용되는 통계 원자료와 파생지표를 재현 가능하게 보관하기 위한 데이터 원천이다. 공개 읽기 화면은 향후 Supabase의 게시된 스냅샷을 읽고, KOSIS 키는 수집 작업 또는 서버 함수에서만 사용한다.
 
+## Snapshot 적재 계약
+
+브라우저의 KOSIS 화면은 검색·metadata·제한 미리보기만 수행한다. 공개형 no-login 사이트에서
+브라우저가 Supabase service key로 직접 쓰거나 공개 POST를 허용하면 누구나 원자료 적재를
+반복할 수 있으므로, 원자료 적재는 [kosis-snapshot.mjs](../scripts/kosis-snapshot.mjs)의
+로컬/관리 작업으로 분리한다.
+
+수집기는 기본적으로 DRY-RUN이며 다음을 보장한다.
+
+- `--write`를 명시해야 `data_sources`·`source_snapshots`·`geo_observations`에 적재한다.
+- `--public`을 함께 지정한 승인 자료만 공개 브라우저가 읽을 수 있다.
+- 한 snapshot은 최대 2,000행으로 제한하고, 작은 지역·짧은 기간부터 검증한다.
+- 원자료 응답과 metadata, 요청 파라미터, checksum을 `source_snapshots.raw_payload`에 저장한다.
+- 각 값은 KOSIS 분류·항목·시점 조합으로 deterministic `external_id`를 만들어 반복 적재를
+  upsert한다. 이를 위해 `0005_kosis_observation_access.sql`의 unique index가 필요하다.
+- KOSIS 자체 응답에는 geometry가 없으므로 `geo_observations.region_code`를 보존하고,
+  다음 2D 단계에서 SGIS/VWorld 행정구역 geometry와 별도로 조인한다.
+- `0005_kosis_observation_access.sql`은 Supabase SQL Editor에서 한 번 실행해야 한다. 이 migration은
+  snapshot 내부 관측값의 중복 방지 unique index와 `is_public=true` 관측값의 공개 SELECT 정책을 추가한다.
+
+예시(현재 운영에서 확인한 소규모 후보; 교육용 표 확정 전에는 DRY-RUN만 실행):
+
+```bash
+node scripts/kosis-snapshot.mjs \
+  --org-id=101 --tbl-id=DT_1YL12001E \
+  --obj-l1=21010,21020 --obj-l2=ALL --itm-id=T001 \
+  --prd-se=M --start-prd-de=202401 --end-prd-de=202404
+```
+
+교수자가 표·범위·출처를 확인한 뒤에만 다음처럼 적재한다.
+
+```bash
+node scripts/kosis-snapshot.mjs \
+  --org-id=101 --tbl-id=DT_1YL12001E \
+  --obj-l1=21010,21020 --obj-l2=ALL --itm-id=T001 \
+  --prd-se=M --start-prd-de=202401 --end-prd-de=202404 \
+  --write --public
+```
+
 ## 다음에 필요한 사용자 입력
 
 KOSIS 검색 결과에서 첫 번째 교육용 표를 하나 고른 뒤 다음 값을 전달하면 된다.
@@ -100,6 +139,13 @@ KOSIS 검색 결과에서 첫 번째 교육용 표를 하나 고른 뒤 다음 �
 - 주기와 시작·종료 시점
 - 총량인지 비율인지, 비율이면 분모의 의미
 
-표 ID가 확정되면 메타데이터 호출 결과를 실제로 검증하고, 작은 지역·짧은 기간을 먼저 Supabase에 적재한 뒤 2D 단계구분도·범례·출처 패널로 연결한다.
+표 ID가 확정되면 metadata와 작은 값 범위를 DRY-RUN으로 확인하고, `0005` migration 적용 후
+controlled snapshot을 Supabase에 적재한다. 그 snapshot의 `region_code`를 SGIS/VWorld 경계와
+조인해 2D 단계구분도·범례·출처 패널로 연결한다.
 
-2026-09-16 운영 검증에서는 `101 / DT_1YL12001E` 표에 `objL1=21010+21020`, `objL2=ALL`, `itmId=T001`을 적용해 8개 정규화 레코드를 확인했다. 이 표의 원천 응답 주기는 요청값과 별개로 `M`으로 반환되었으므로, 저장 전에는 응답의 `PRD_SE`와 단위를 다시 확인한다.
+반복 수집이 필요하면 GitHub Actions의 `KOSIS snapshot ingest` workflow를 수동 실행할 수 있다.
+GitHub repository secrets에 `KOSIS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를
+등록하고, workflow 입력에는 표 코드·분류·항목·기간만 넣는다. service key는 workflow 로그나
+브라우저에 출력하지 않는다.
+
+2026-09-16 운영 검증에서는 `101 / DT_1YL12001E` 표에 `objL1=21010+21020`, `objL2=ALL`, `itmId=T001`을 적용해 8개 정규화 레코드를 확인했다. 2026-09-17에는 같은 요청을 새 snapshot 수집기 dry-run으로 재검증했다. 이 표의 원천 응답 주기는 요청값과 별개로 `M`으로 반환되었으므로, 저장 전에는 응답의 `PRD_SE`와 단위를 다시 확인한다.

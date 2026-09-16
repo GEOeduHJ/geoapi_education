@@ -2,7 +2,7 @@
 
 > 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 10년 백필·월별 요약 view 운영 검증 완료
 >
-> 기준일: 2026-09-16
+> 기준일: 2026-09-17
 
 ## 사용자가 준비할 입력
 
@@ -55,7 +55,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 | 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, `0001`~`0003` migration 실행 | `data_sources`·기후자료 read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003` 적용 | 10개 도시·36,530행 백필 및 `0004` 월별 요약 조회 완료 |
-| 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회 adapter와 소규모 운영 검증 완료**; 첫 수업용 표의 원자료·metadata·지역코드·단위 DB snapshot 적재 대기 |
+| 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회 adapter와 소규모 운영 검증 완료**; controlled snapshot CLI·metadata/raw/checksum·중복 방지 migration 구현, 첫 수업용 표의 실제 적재 대기 |
 | 5 | 2D 지도 제작기 | 1~4번의 snapshot | **KMA 관측소 위치 레이어 slice 완료**; KOSIS/SGIS 주제 레이어, 범례 편집, 출처·분류 설정 확장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
 | 7 | 3D 지형·입체 통계 | 5번의 공통 data contract | 3D 장면과 2D/표 fallback, 고도·배율·출처 표시 |
@@ -105,6 +105,9 @@ Supabase source_snapshots / climate_stations / climate_daily_observations
 
 현재 Supabase 공개 읽기 스모크 검증은 완료되었다. `data_sources`와 게시 자료 조회는 `HTTP 200`, `learner_attempts` 조회는 `HTTP 401`로 확인했다. 이 결과는 로그인 없는 공개 이용 정책과 직접 학습기록 차단 정책이 운영 프로젝트에서 작동함을 뜻한다.
 
+이번 단계에서 추가한 `0005_kosis_observation_access.sql`은 첫 KOSIS snapshot을 적재하기 전에 Supabase
+SQL Editor에서 한 번 실행한다. 이 migration을 실행하기 전에는 `--write` 적재를 진행하지 않는다.
+
 다음 데이터 작업 명령은 작은 샘플부터 실행한다.
 
 ```bash
@@ -121,4 +124,4 @@ node scripts/kma-climate.mjs \
   --write
 ```
 
-적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시한다. 다음 단계는 KOSIS 검색 결과에서 첫 수업용 통계표를 확정하고, 메타데이터·작은 값 샘플을 Supabase snapshot으로 적재한 뒤 2D 주제 레이어로 연결하는 것이다. adapter 경로와 문서는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시한다. 다음 단계는 `0005_kosis_observation_access.sql` 적용 여부를 확인하고, KOSIS 검색 결과에서 첫 수업용 통계표를 확정한 뒤 controlled snapshot CLI로 메타데이터·원자료·지역코드를 Supabase에 적재하고 2D 주제 레이어로 연결하는 것이다. adapter 경로와 문서는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.

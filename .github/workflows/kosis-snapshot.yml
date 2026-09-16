@@ -1,0 +1,81 @@
+name: KOSIS snapshot ingest
+
+on:
+  workflow_dispatch:
+    inputs:
+      org_id:
+        description: KOSIS 기관 코드
+        required: true
+        type: string
+      tbl_id:
+        description: KOSIS 통계표 코드
+        required: true
+        type: string
+      obj_l1:
+        description: 첫 번째 분류 코드 목록(쉼표 또는 공백)
+        required: true
+        type: string
+      obj_l2:
+        description: 두 번째 분류 코드 목록. 없으면 ALL
+        required: true
+        default: ALL
+        type: string
+      itm_id:
+        description: 항목 코드 목록(쉼표 또는 공백)
+        required: true
+        type: string
+      prd_se:
+        description: 주기(Y/Q/M/S/D/F/IR)
+        required: true
+        type: string
+      start_prd_de:
+        description: "시작 시점(예: 202401)"
+        required: true
+        type: string
+      end_prd_de:
+        description: "종료 시점(예: 202404)"
+        required: true
+        type: string
+      publish:
+        description: true일 때 공개 읽기 허용
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Write controlled snapshot
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ORG_ID: ${{ inputs.org_id }}
+          TBL_ID: ${{ inputs.tbl_id }}
+          OBJ_L1: ${{ inputs.obj_l1 }}
+          OBJ_L2: ${{ inputs.obj_l2 }}
+          ITM_ID: ${{ inputs.itm_id }}
+          PRD_SE: ${{ inputs.prd_se }}
+          START_PRD_DE: ${{ inputs.start_prd_de }}
+          END_PRD_DE: ${{ inputs.end_prd_de }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          public_flag=""
+          if [ "$PUBLISH" = "true" ]; then public_flag="--public"; fi
+          node scripts/kosis-snapshot.mjs \
+            --org-id="$ORG_ID" --tbl-id="$TBL_ID" \
+            --obj-l1="$OBJ_L1" --obj-l2="$OBJ_L2" --itm-id="$ITM_ID" \
+            --prd-se="$PRD_SE" --start-prd-de="$START_PRD_DE" --end-prd-de="$END_PRD_DE" \
+            --write $public_flag

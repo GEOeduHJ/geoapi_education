@@ -1,6 +1,6 @@
 # 구현 진행 현황
 
-최종 갱신: 2026-09-16
+최종 갱신: 2026-09-17
 
 ## 이번 단계에서 완료한 것
 
@@ -24,6 +24,7 @@
 - `/create/chart`에 Supabase 기반 KMA 기후 비교 화면 구현: 지표·기간 선택, 관측소별 평균, 유효 관측일수, 빈 자료·오류 상태
 - `/create/2d`에 VWorld 2D 로더와 KMA ASOS 관측소 레이어 구현: 지도 클릭 시 지점번호·좌표·고도 확인, 지도 실패 시 안내 fallback
 - KOSIS 서버 adapter 구현: 통계표 검색·분류/항목 메타데이터·제한된 통계값 조회, KOSIS 키 서버 전용 유지, 통계부호·결측 원문 보존
+- KOSIS controlled snapshot 수집기 구현: DRY-RUN/`--write`/`--public` 분리, 원자료·metadata·요청정보·checksum 보존, `geo_observations` 중복 적재 방지 migration
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -95,7 +96,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 - Supabase 프로젝트 URL·키와 기존 공개 읽기·학습기록 직접 접근 차단을 확인함. `climate_stations`·`climate_daily_observations`에 10개 관측소·36,530행 백필을 완료했으며, 공개 REST 행 수 `0-0/36530`을 확인함. `climate_period_summaries` 공개 REST 조회는 `HTTP 206`, 1,200행(10개 관측소 × 120개월)으로 확인함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
-- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. 첫 수업용 표와 Supabase snapshot은 별도 확정 대기
+- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. controlled snapshot CLI와 `0005` migration을 추가했으며, 첫 수업용 표와 실제 Supabase snapshot은 교육 주제 확정 대기
 
 ## 검증 기록
 
