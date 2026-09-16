@@ -62,7 +62,6 @@ interface OpenLayersNamespace {
   };
   proj: {
     fromLonLat(coordinate: Coordinate, projection?: string): Coordinate;
-    transform(coordinate: Coordinate, source: string, destination: string): Coordinate;
   };
 }
 
@@ -173,6 +172,64 @@ function isPosition(value: unknown): value is [number, number] {
     && Number.isFinite(value[1]);
 }
 
+const GRS80_SEMI_MAJOR = 6378137;
+const GRS80_FLATTENING = 1 / 298.257222101;
+const GRS80_ECCENTRICITY_SQUARED = GRS80_FLATTENING * (2 - GRS80_FLATTENING);
+const GRS80_SECOND_ECCENTRICITY_SQUARED = GRS80_ECCENTRICITY_SQUARED / (1 - GRS80_ECCENTRICITY_SQUARED);
+const EPSG_5179_SCALE = 0.9996;
+const EPSG_5179_CENTRAL_MERIDIAN = 127.5 * Math.PI / 180;
+const EPSG_5179_ORIGIN_LATITUDE = 38 * Math.PI / 180;
+const EPSG_5179_FALSE_EASTING = 1000000;
+const EPSG_5179_FALSE_NORTHING = 2000000;
+
+function meridianArc(latitude: number): number {
+  const e2 = GRS80_ECCENTRICITY_SQUARED;
+  return GRS80_SEMI_MAJOR * (
+    (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * latitude
+    - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * latitude)
+    + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * latitude)
+    - (35 * e2 ** 3 / 3072) * Math.sin(6 * latitude)
+  );
+}
+
+/** Converts SGIS UTM-K / EPSG:5179 coordinates to VWorld's Web Mercator. */
+export function epsg5179ToWebMercator([easting, northing]: [number, number]): Coordinate {
+  const e2 = GRS80_ECCENTRICITY_SQUARED;
+  const ePrime2 = GRS80_SECOND_ECCENTRICITY_SQUARED;
+  const m = (northing - EPSG_5179_FALSE_NORTHING) / EPSG_5179_SCALE
+    + meridianArc(EPSG_5179_ORIGIN_LATITUDE);
+  const mu = m / (GRS80_SEMI_MAJOR * (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256));
+  const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+  const footprintLatitude = mu
+    + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu)
+    + (21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu)
+    + (151 * e1 ** 3 / 96) * Math.sin(6 * mu)
+    + (1097 * e1 ** 4 / 512) * Math.sin(8 * mu);
+  const sinFootprint = Math.sin(footprintLatitude);
+  const cosFootprint = Math.cos(footprintLatitude);
+  const tanFootprint = Math.tan(footprintLatitude);
+  const radiusPrimeVertical = GRS80_SEMI_MAJOR / Math.sqrt(1 - e2 * sinFootprint ** 2);
+  const radiusMeridian = GRS80_SEMI_MAJOR * (1 - e2) / (1 - e2 * sinFootprint ** 2) ** 1.5;
+  const c1 = ePrime2 * cosFootprint ** 2;
+  const t1 = tanFootprint ** 2;
+  const d = (easting - EPSG_5179_FALSE_EASTING) / (radiusPrimeVertical * EPSG_5179_SCALE);
+  const latitude = footprintLatitude - (radiusPrimeVertical * tanFootprint / radiusMeridian) * (
+    d ** 2 / 2
+    - (5 + 3 * t1 + 10 * c1 - 4 * c1 ** 2 - 9 * ePrime2) * d ** 4 / 24
+    + (61 + 90 * t1 + 298 * c1 + 45 * t1 ** 2 - 252 * ePrime2 - 3 * c1 ** 2) * d ** 6 / 720
+  );
+  const longitude = EPSG_5179_CENTRAL_MERIDIAN + (
+    d
+    - (1 + 2 * t1 + c1) * d ** 3 / 6
+    + (5 - 2 * c1 + 28 * t1 - 3 * c1 ** 2 + 8 * ePrime2 + 24 * t1 ** 2) * d ** 5 / 120
+  ) / cosFootprint;
+  const clampedLatitude = Math.max(-85.0511287798, Math.min(85.0511287798, latitude * 180 / Math.PI)) * Math.PI / 180;
+  return [
+    GRS80_SEMI_MAJOR * longitude,
+    GRS80_SEMI_MAJOR * Math.log(Math.tan(Math.PI / 4 + clampedLatitude / 2)),
+  ];
+}
+
 /** Transforms a GeoJSON coordinate tree while preserving Polygon nesting. */
 export function transformNestedCoordinates(
   value: unknown,
@@ -190,7 +247,7 @@ function createBoundaryFeature(
 ): VWorldFeature | null {
   const coordinates = transformNestedCoordinates(
     boundary.geometry.coordinates,
-    (coordinate) => runtime.ol.proj.transform(coordinate, "EPSG:5179", "EPSG:900913"),
+    epsg5179ToWebMercator,
   );
   if (!Array.isArray(coordinates)) return null;
 

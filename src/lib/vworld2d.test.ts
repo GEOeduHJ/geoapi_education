@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractVWorldScriptUrls, transformNestedCoordinates } from "./vworld2d";
+import { epsg5179ToWebMercator, extractVWorldScriptUrls, transformNestedCoordinates } from "./vworld2d";
 
 describe("VWorld 2D loader helpers", () => {
   it("extracts document.write script URLs without interpreting the markup", () => {
@@ -22,5 +22,11 @@ describe("VWorld 2D loader helpers", () => {
 
   it("does not invent geometry for malformed coordinates", () => {
     expect(transformNestedCoordinates([["126", 36]], ([x, y]) => [x + 1, y + 1])).toEqual([[null, null]]);
+  });
+
+  it("converts the SGIS Seoul reference coordinate to a plausible Web Mercator point", () => {
+    const [x, y] = epsg5179ToWebMercator([953932, 1952053]);
+    expect(x).toBeCloseTo(14135165, 0);
+    expect(y).toBeCloseTo(4518393, 0);
   });
 });
