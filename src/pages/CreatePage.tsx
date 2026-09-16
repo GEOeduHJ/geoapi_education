@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
-import { KosisPublicSnapshotPanel } from "../components/KosisPublicSnapshotPanel";
+import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
+import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { KosisTableSearch } from "../components/KosisTableSearch";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
+import { fetchLatestPublicKosisDataset, type PublicKosisDataset } from "../lib/geo-observations";
+import { joinKosisObservationsToSgisBoundaries } from "../lib/geo-join";
 import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
+
+const EMPTY_PUBLIC_KOSIS_DATASET: PublicKosisDataset = {
+  snapshot: null,
+  observations: [],
+  truncated: false,
+  error: null,
+};
 
 const recipes = [
   { label: "관계형", title: "2D 지도자료", description: "분포·밀도·접근성·변화를 평면 지도와 레이어로 구성", to: "/create/2d", accent: "teal" },
@@ -88,12 +98,16 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
   const [sgisBoundaryStatus, setSgisBoundaryStatus] = useState<SgisBoundaryPanelStatus>("idle");
   const [sgisBoundaries, setSgisBoundaries] = useState<SgisBoundaryResponse | null>(null);
   const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
+  const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
+  const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
 
   useEffect(() => {
     if (isThreeD || source !== "kosis") {
       setSgisBoundaryStatus("idle");
       setSgisBoundaries(null);
       setSgisBoundaryError(null);
+      setKosisStatus("idle");
+      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
       return;
     }
 
@@ -101,20 +115,34 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
     setSgisBoundaryStatus("loading");
     setSgisBoundaries(null);
     setSgisBoundaryError(null);
+    setKosisStatus("loading");
+    setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
 
-    fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 }).then((result) => {
+    Promise.all([
+      fetchLatestPublicKosisDataset(),
+      fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 }),
+    ]).then(([kosisResult, sgisResult]) => {
       if (cancelled) return;
-      setSgisBoundaries(result.data);
-      setSgisBoundaryError(result.error);
-      setSgisBoundaryStatus(result.error ? "error" : "ready");
+      setKosisDataset(kosisResult);
+      setKosisStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
+      setSgisBoundaries(sgisResult.data);
+      setSgisBoundaryError(sgisResult.error);
+      setSgisBoundaryStatus(sgisResult.error ? "error" : "ready");
     }).catch(() => {
       if (cancelled) return;
+      setKosisStatus("error");
+      setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
       setSgisBoundaryStatus("error");
       setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
     });
 
     return () => { cancelled = true; };
   }, [isThreeD, source]);
+
+  const boundaryJoin = useMemo(
+    () => joinKosisObservationsToSgisBoundaries(sgisBoundaries, kosisDataset.observations),
+    [kosisDataset.observations, sgisBoundaries],
+  );
 
   return (
     <div className="page-stack">
@@ -162,8 +190,9 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
               <option value="opentopodata">OpenTopoData 고도</option>
             </select>
             {source === "kosis" && <KosisTableSearch />}
-            {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel />}
+            {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
             {!isThreeD && source === "kosis" && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
+            {!isThreeD && source === "kosis" && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>

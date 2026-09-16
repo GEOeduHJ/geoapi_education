@@ -254,6 +254,19 @@ textarea { padding: 12px; resize: vertical; font-size: 12px; line-height: 1.7; }
 .sgis-boundary-panel__items div { display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid #e6eeeb; color: #55716f; font-size: 9px; }
 .sgis-boundary-panel__items code { color: #53717a; font-family: "DM Mono", monospace; font-size: 8px; }
 .sgis-boundary-panel__notice { margin: 7px 0 0; color: #7c908d; font-size: 8px; line-height: 1.4; }
+.kosis-join-panel { margin-top: 13px; padding-top: 13px; border-top: 1px solid #e6ecec; }
+.kosis-join-panel__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.kosis-join-panel__heading h4 { margin: 0; color: var(--navy); font-size: 13px; }
+.kosis-join-panel__heading > span { color: #896437; font-family: "DM Mono", monospace; font-size: 8px; }
+.kosis-join-panel__message { margin: 10px 0 0; padding: 10px; display: grid; gap: 4px; border-radius: 7px; background: #edf5f3; color: #55716f; font-size: 9px; line-height: 1.5; }
+.kosis-join-panel__message strong { color: var(--navy); font-size: 10px; }
+.kosis-join-panel__message small { color: #7c908d; font-size: 8px; }
+.kosis-join-panel__message--warning { background: #fff9ef; color: #896437; }
+.kosis-join-panel__message--warning strong { color: #755024; }
+.kosis-join-panel__message--error { background: #fbefdf; color: #896437; }
+.kosis-join-panel__message--error strong { color: #755024; }
+.kosis-join-panel__message--ready { background: #eaf7f1; }
+.kosis-join-panel__notice { margin: 7px 0 0; color: #7c908d; font-size: 8px; line-height: 1.4; }
 .muted-copy { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .chart-placeholder { min-height: 370px; padding: 45px; display: flex; align-items: center; gap: 70px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); }
 .placeholder-chart { width: 45%; height: 190px; padding: 20px; display: flex; align-items: end; justify-content: space-around; gap: 20px; border-bottom: 1px solid #a8b9ba; border-left: 1px solid #a8b9ba; background: repeating-linear-gradient(to top, transparent 0, transparent 37px, #e7eded 38px); }

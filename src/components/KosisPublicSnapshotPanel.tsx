@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
 import {
-  fetchLatestPublicKosisDataset,
+  type PublicKosisDataset,
   type PublicGeoObservation,
   type PublicSourceSnapshot,
 } from "../lib/geo-observations";
 
-type PanelStatus = "loading" | "ready" | "empty" | "error";
+export type KosisPanelStatus = "idle" | "loading" | "ready" | "empty" | "error";
 
 function formatDate(value: string | null): string {
   if (!value) return "-";
@@ -41,33 +40,14 @@ function describeError(error: string | null): string {
   return "공개 KOSIS snapshot을 읽는 중 문제가 발생했습니다.";
 }
 
-export function KosisPublicSnapshotPanel() {
-  const [status, setStatus] = useState<PanelStatus>("loading");
-  const [snapshot, setSnapshot] = useState<PublicSourceSnapshot | null>(null);
-  const [observations, setObservations] = useState<PublicGeoObservation[]>([]);
-  const [truncated, setTruncated] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStatus("loading");
-    setError(null);
-
-    fetchLatestPublicKosisDataset().then((result) => {
-      if (cancelled) return;
-      setSnapshot(result.snapshot);
-      setObservations(result.observations);
-      setTruncated(result.truncated);
-      setError(result.error);
-      setStatus(result.error ? "error" : result.snapshot ? "ready" : "empty");
-    }).catch(() => {
-      if (cancelled) return;
-      setStatus("error");
-      setError("PUBLIC_KOSIS_READ_FAILED");
-    });
-
-    return () => { cancelled = true; };
-  }, []);
+export function KosisPublicSnapshotPanel({
+  status,
+  dataset,
+}: {
+  status: KosisPanelStatus;
+  dataset: PublicKosisDataset;
+}) {
+  const { snapshot, observations, truncated, error } = dataset;
 
   return (
     <section className="kosis-public-panel" aria-labelledby="kosis-public-snapshot-title">
@@ -79,6 +59,7 @@ export function KosisPublicSnapshotPanel() {
         <span>읽기 전용</span>
       </div>
 
+      {status === "idle" && <p className="kosis-public-panel__message" role="status">공개 snapshot 요청을 준비하는 중입니다…</p>}
       {status === "loading" && <p className="kosis-public-panel__message" role="status">공개 snapshot을 확인하는 중입니다…</p>}
       {status === "error" && (
         <div className="kosis-public-panel__message kosis-public-panel__message--error" role="alert">

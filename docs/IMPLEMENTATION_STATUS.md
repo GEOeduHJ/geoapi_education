@@ -28,6 +28,7 @@
 - KOSIS 공개 snapshot 읽기 repository·패널 구현: `raw_payload`를 제외한 제한 조회, 최대 2,000행, 공개·미적재·오류 상태와 geometry 연결 대기 안내
 - SGIS 행정구역경계 서버 adapter·클라이언트 상태 패널 구현: 서버 전용 토큰, 2025 시도 경계 조회, EPSG:5179 원본 좌표계와 코드 확인
 - SGIS 2025 시도 경계를 VWorld 2D의 EPSG:900913 면 레이어로 변환·표시: KOSIS 선택 시 상태 패널과 지도에 동일 응답을 공유하며, 값 결합 없는 기준경계로만 렌더링
+- KOSIS 공개 관측값과 SGIS 경계의 정확한 코드 조인 진단 구현: `region_code === adm_cd`만 허용하고, 중복 지역값·복수 시점·복수 단위를 `ambiguous-values`로 차단
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -79,7 +80,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 
 ### 2. 지도 어댑터
 
-- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·SGIS 기준경계 면 레이어·범례·클릭 피처·출처 패널 **(KOSIS↔SGIS 지역코드 결합 전 단계 완료)**
+- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·SGIS 기준경계 면 레이어·범례·클릭 피처·출처 패널 **(KOSIS↔SGIS 정확한 코드 조인 진단 완료, 단계구분도 색상은 검증된 단일 자료 대기)**
 - 3D: VWorld WebGL/Cesium 초기화 가능 여부를 먼저 확인하고, 고도·카메라·피처 선택 계약을 별도로 구현
 - 지도 데이터는 `material_type`으로 분리하고 2D 번들과 3D 번들 간 의존성 전파를 막음
 
