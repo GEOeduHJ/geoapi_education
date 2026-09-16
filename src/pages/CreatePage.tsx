@@ -130,7 +130,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
 
       <WorkspaceNotice
         dimension={dimension}
-        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : "VWorld 2D 배경에 KMA ASOS 관측소를 올려 자료 제작의 공간 기준을 확인합니다. 다음 단계에서 KOSIS·SGIS 주제 레이어를 추가합니다."}
+        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : "VWorld 2D 배경에 KMA ASOS 관측소와 SGIS 기준경계를 올려 공간 기준을 확인합니다. KOSIS 지역코드 대응표를 검증한 뒤 값 기반 주제 레이어를 연결합니다."}
       />
 
       <section className="workspace-grid">

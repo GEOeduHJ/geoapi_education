@@ -7,6 +7,7 @@ const MIN_YEAR = 2000;
 const MAX_YEAR = 2025;
 const DEFAULT_YEAR = 2025;
 const DEFAULT_ADM_CD = "non";
+const SGIS_NATIONWIDE_ADM_CD = "0";
 const DEFAULT_LOW_SEARCH = 1;
 const ADM_CD_PATTERN = /^(?:non|\d{2}|\d{5}|\d{8})$/;
 const LOW_SEARCH_VALUES = new Set([0, 1, 2]);
@@ -63,6 +64,15 @@ function readQuery(request: ApiRequest): { year: number; admCd: string; lowSearc
   if (!ADM_CD_PATTERN.test(admCd)) return { error: "INVALID_SGIS_BOUNDARY_CODE" };
   if (lowSearch === undefined || !LOW_SEARCH_VALUES.has(lowSearch)) return { error: "INVALID_SGIS_BOUNDARY_LOW_SEARCH" };
   return { year, admCd, lowSearch };
+}
+
+/**
+ * The current SGIS endpoint documents `non` for a nationwide request, but
+ * currently returns -201 for that literal and succeeds with `0`. Keep the
+ * public app contract readable and translate only at the upstream boundary.
+ */
+function toUpstreamAdmCd(admCd: string): string {
+  return admCd === DEFAULT_ADM_CD ? SGIS_NATIONWIDE_ADM_CD : admCd;
 }
 
 async function getSgisToken(): Promise<string> {
@@ -122,7 +132,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const url = new URL(`${SGIS_BASE}/boundary/hadmarea.geojson`);
     url.searchParams.set("accessToken", accessToken);
     url.searchParams.set("year", String(parsed.year));
-    url.searchParams.set("adm_cd", parsed.admCd);
+    url.searchParams.set("adm_cd", toUpstreamAdmCd(parsed.admCd));
     url.searchParams.set("low_search", String(parsed.lowSearch));
 
     const upstream = await fetch(url, { headers: { Accept: "application/json" } });

@@ -65,7 +65,7 @@ node scripts/smoke-api.mjs
 | `GET /api/kosis-search?searchNm=인구` | KOSIS 통계표 후보 검색 | 구현·키 서버 전용 |
 | `GET /api/kosis-meta?orgId=101&tblId=...` | 선택 표의 분류·항목·단위 코드 조회 | 구현·메타데이터 UI·운영 검증 완료 |
 | `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·소규모 운영 검증 완료 |
-| `GET /api/sgis-boundary?year=2025&admCd=non&lowSearch=1` | 시도·시군구·읍면동 행정구역 GeoJSON 조회 | 구현·토큰 비노출·좌표계 명시·VWorld 면 레이어 연결 |
+| `GET /api/sgis-boundary?year=2025&admCd=non&lowSearch=1` | 시도·시군구·읍면동 행정구역 GeoJSON 조회 | 구현·토큰 비노출·좌표계 명시·VWorld 면 레이어 연결. 전국 `non`은 upstream 호환상 `0`으로 변환 |
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 

@@ -55,7 +55,7 @@ describe("SGIS boundary server function", () => {
     vi.stubGlobal("fetch", fetchMock);
     const recorder = responseRecorder();
 
-    await handler({ method: "GET", query: { year: "2025", admCd: "11", lowSearch: "1" } }, recorder.response);
+    await handler({ method: "GET", query: { year: "2025", admCd: "non", lowSearch: "1" } }, recorder.response);
 
     expect(recorder.statusCode).toBe(200);
     expect(recorder.headers["Cache-Control"]).toContain("s-maxage=86400");
@@ -63,7 +63,7 @@ describe("SGIS boundary server function", () => {
       ok: true,
       provider: "sgis",
       sourceCrs: "EPSG:5179",
-      query: { year: 2025, admCd: "11", lowSearch: 1 },
+      query: { year: 2025, admCd: "non", lowSearch: 1 },
       data: { features: [{ properties: { adm_cd: "11", adm_nm: "서울특별시" } }] },
     });
     expect(JSON.stringify(recorder.payload)).not.toContain("server-only-token");
@@ -71,7 +71,7 @@ describe("SGIS boundary server function", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const boundaryUrl = new URL(String(fetchMock.mock.calls[1][0]));
     expect(boundaryUrl.searchParams.get("year")).toBe("2025");
-    expect(boundaryUrl.searchParams.get("adm_cd")).toBe("11");
+    expect(boundaryUrl.searchParams.get("adm_cd")).toBe("0");
     expect(boundaryUrl.searchParams.get("low_search")).toBe("1");
   });
 });
