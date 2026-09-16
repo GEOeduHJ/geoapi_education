@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
 import { KosisPublicSnapshotPanel } from "../components/KosisPublicSnapshotPanel";
 import { KosisTableSearch } from "../components/KosisTableSearch";
-import { SgisBoundaryStatusPanel } from "../components/SgisBoundaryStatusPanel";
+import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
+import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
 
 const recipes = [
   { label: "관계형", title: "2D 지도자료", description: "분포·밀도·접근성·변화를 평면 지도와 레이어로 구성", to: "/create/2d", accent: "teal" },
@@ -84,6 +85,36 @@ function WorkspaceNotice({ dimension, description }: { dimension: "2D" | "3D"; d
 export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
   const isThreeD = dimension === "3D";
   const [source, setSource] = useState("kma-hub");
+  const [sgisBoundaryStatus, setSgisBoundaryStatus] = useState<SgisBoundaryPanelStatus>("idle");
+  const [sgisBoundaries, setSgisBoundaries] = useState<SgisBoundaryResponse | null>(null);
+  const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isThreeD || source !== "kosis") {
+      setSgisBoundaryStatus("idle");
+      setSgisBoundaries(null);
+      setSgisBoundaryError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setSgisBoundaryStatus("loading");
+    setSgisBoundaries(null);
+    setSgisBoundaryError(null);
+
+    fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 }).then((result) => {
+      if (cancelled) return;
+      setSgisBoundaries(result.data);
+      setSgisBoundaryError(result.error);
+      setSgisBoundaryStatus(result.error ? "error" : "ready");
+    }).catch(() => {
+      if (cancelled) return;
+      setSgisBoundaryStatus("error");
+      setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
+    });
+
+    return () => { cancelled = true; };
+  }, [isThreeD, source]);
 
   return (
     <div className="page-stack">
@@ -115,7 +146,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
           </div>
         ) : (
           <div className="map-stage map-stage--live">
-            <VWorld2DMap />
+            <VWorld2DMap boundaries={source === "kosis" ? sgisBoundaries : null} />
           </div>
         )}
         <aside className="workspace-sidebar">
@@ -132,7 +163,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
             </select>
             {source === "kosis" && <KosisTableSearch />}
             {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel />}
-            {!isThreeD && source === "kosis" && <SgisBoundaryStatusPanel />}
+            {!isThreeD && source === "kosis" && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>

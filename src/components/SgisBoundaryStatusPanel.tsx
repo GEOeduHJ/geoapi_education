@@ -1,28 +1,16 @@
-import { useEffect, useState } from "react";
-import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
+import type { SgisBoundaryResponse } from "../lib/sgis";
 
-type PanelStatus = "loading" | "ready" | "error";
+export type SgisBoundaryPanelStatus = "idle" | "loading" | "ready" | "error";
 
-export function SgisBoundaryStatusPanel() {
-  const [status, setStatus] = useState<PanelStatus>("loading");
-  const [data, setData] = useState<SgisBoundaryResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 }).then((result) => {
-      if (cancelled) return;
-      setData(result.data);
-      setError(result.error);
-      setStatus(result.error ? "error" : "ready");
-    }).catch(() => {
-      if (cancelled) return;
-      setStatus("error");
-      setError("SGIS_BOUNDARY_REQUEST_FAILED");
-    });
-
-    return () => { cancelled = true; };
-  }, []);
+export function SgisBoundaryStatusPanel({
+  status,
+  data,
+  error,
+}: {
+  status: SgisBoundaryPanelStatus;
+  data: SgisBoundaryResponse | null;
+  error: string | null;
+}) {
 
   return (
     <section className="sgis-boundary-panel" aria-labelledby="sgis-boundary-panel-title">
@@ -33,6 +21,7 @@ export function SgisBoundaryStatusPanel() {
         </div>
         <span>2025</span>
       </div>
+      {status === "idle" && <p className="sgis-boundary-panel__message" role="status">SGIS 경계 요청을 준비하는 중입니다…</p>}
       {status === "loading" && <p className="sgis-boundary-panel__message" role="status">시도 경계를 확인하는 중입니다…</p>}
       {status === "error" && (
         <div className="sgis-boundary-panel__message sgis-boundary-panel__message--error" role="alert">

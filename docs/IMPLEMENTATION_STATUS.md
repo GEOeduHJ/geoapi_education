@@ -27,6 +27,7 @@
 - KOSIS controlled snapshot 수집기 구현: DRY-RUN/`--write`/`--public` 분리, 원자료·metadata·요청정보·checksum 보존, `geo_observations` 중복 적재 방지 migration
 - KOSIS 공개 snapshot 읽기 repository·패널 구현: `raw_payload`를 제외한 제한 조회, 최대 2,000행, 공개·미적재·오류 상태와 geometry 연결 대기 안내
 - SGIS 행정구역경계 서버 adapter·클라이언트 상태 패널 구현: 서버 전용 토큰, 2025 시도 경계 조회, EPSG:5179 원본 좌표계와 코드 확인
+- SGIS 2025 시도 경계를 VWorld 2D의 EPSG:900913 면 레이어로 변환·표시: KOSIS 선택 시 상태 패널과 지도에 동일 응답을 공유하며, 값 결합 없는 기준경계로만 렌더링
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -64,7 +65,7 @@ node scripts/smoke-api.mjs
 | `GET /api/kosis-search?searchNm=인구` | KOSIS 통계표 후보 검색 | 구현·키 서버 전용 |
 | `GET /api/kosis-meta?orgId=101&tblId=...` | 선택 표의 분류·항목·단위 코드 조회 | 구현·메타데이터 UI·운영 검증 완료 |
 | `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·소규모 운영 검증 완료 |
-| `GET /api/sgis-boundary?year=2025&admCd=non&lowSearch=1` | 시도·시군구·읍면동 행정구역 GeoJSON 조회 | 구현·토큰 비노출·좌표계 명시 |
+| `GET /api/sgis-boundary?year=2025&admCd=non&lowSearch=1` | 시도·시군구·읍면동 행정구역 GeoJSON 조회 | 구현·토큰 비노출·좌표계 명시·VWorld 면 레이어 연결 |
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 
@@ -78,7 +79,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 
 ### 2. 지도 어댑터
 
-- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·범례·클릭 피처·출처 패널 **(KMA 위치 레이어와 SGIS 경계 확인 slice 구현 완료)**
+- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·SGIS 기준경계 면 레이어·범례·클릭 피처·출처 패널 **(KOSIS↔SGIS 지역코드 결합 전 단계 완료)**
 - 3D: VWorld WebGL/Cesium 초기화 가능 여부를 먼저 확인하고, 고도·카메라·피처 선택 계약을 별도로 구현
 - 지도 데이터는 `material_type`으로 분리하고 2D 번들과 3D 번들 간 의존성 전파를 막음
 
@@ -104,7 +105,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 ## 검증 기록
 
 - `npm run typecheck`: 통과
-- `npm test`: 11개 테스트 파일·30개 테스트 통과
+- `npm test`: 12개 테스트 파일·34개 테스트 통과
 - `npm run build`: Vite production build 통과
 - `node scripts/smoke-api.mjs`: KOSIS 통합검색을 포함한 provider 스모크, Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함. KOSIS 통계값은 별도 운영 요청으로 후보 표의 8개 소규모 레코드를 확인함
 - 기후자료 적재 검증: Supabase 공개 읽기 `HTTP 200`, 관측소 3개·일자료 9행 확인

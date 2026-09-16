@@ -11,10 +11,11 @@ import {
   loadVWorld2D,
   type VWorld2DRuntime,
 } from "../lib/vworld2d";
+import type { SgisBoundaryResponse } from "../lib/sgis";
 
 type MapStatus = "idle" | "loading" | "ready" | "error";
 
-export function VWorld2DMap() {
+export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryResponse | null }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
   const rawId = useId();
@@ -49,7 +50,7 @@ export function VWorld2DMap() {
 
     loadVWorld2D().then((runtime) => {
       if (cancelled || !mapElementRef.current) return;
-      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId);
+      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId, boundaries);
       mapRef.current = { runtime, map };
       setMapStatus("ready");
     }).catch((error) => {
@@ -65,7 +66,7 @@ export function VWorld2DMap() {
         mapRef.current = null;
       }
     };
-  }, [mapId, stationStatus, stations]);
+  }, [boundaries, mapId, stationStatus, stations]);
 
   const selectedStation = stations.find((station) => station.station_id === selectedStationId);
   const domain = resolveVWorldDomain();
@@ -88,9 +89,11 @@ export function VWorld2DMap() {
         <div className="vworld-map-caption">
           <span>VWORLD 2D · KMA ASOS</span>
           <span>{stations.length ? `${stations.length}개 관측소` : "관측소 불러오는 중"}</span>
+          {boundaries && <span>{boundaries.data.features.length}개 경계</span>}
         </div>
         <div className="vworld-map-legend" aria-label="지도 범례">
           <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>
+          {boundaries && <span><i className="vworld-map-legend__area" />SGIS 시도 경계</span>}
           <span>배경: VWorld Graphic</span>
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}

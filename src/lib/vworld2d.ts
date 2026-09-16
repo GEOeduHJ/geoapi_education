@@ -1,6 +1,7 @@
 import { buildVWorldLoaderUrl } from "./api/requests";
 import { hasVWorldClientConfig, publicEnv, resolveVWorldDomain } from "./env";
 import type { ClimateStation } from "./climate";
+import type { SgisBoundaryFeature, SgisBoundaryResponse } from "./sgis";
 
 type Coordinate = [number, number];
 type Extent = [number, number, number, number];
@@ -43,6 +44,8 @@ interface OpenLayersNamespace {
   Feature: new (properties?: Record<string, unknown>) => VWorldFeature;
   geom: {
     Point: new (coordinates: Coordinate) => unknown;
+    Polygon: new (coordinates: unknown) => unknown;
+    MultiPolygon: new (coordinates: unknown) => unknown;
   };
   layer: {
     Vector: new (options: { source: VWorldVectorSource }) => VWorldLayer;
@@ -54,10 +57,11 @@ interface OpenLayersNamespace {
     Circle: new (options: { radius: number; fill: unknown; stroke: unknown }) => unknown;
     Fill: new (options: { color: string }) => unknown;
     Stroke: new (options: { color: string; width: number }) => unknown;
-    Style: new (options: { image: unknown }) => unknown;
+    Style: new (options: { image?: unknown; fill?: unknown; stroke?: unknown }) => unknown;
   };
   proj: {
     fromLonLat(coordinate: Coordinate, projection?: string): Coordinate;
+    transform(coordinate: Coordinate, source: string, destination: string): Coordinate;
   };
 }
 
@@ -159,11 +163,60 @@ export function loadVWorld2D(): Promise<VWorld2DRuntime> {
   return runtimePromise;
 }
 
+function isPosition(value: unknown): value is [number, number] {
+  return Array.isArray(value)
+    && value.length >= 2
+    && typeof value[0] === "number"
+    && Number.isFinite(value[0])
+    && typeof value[1] === "number"
+    && Number.isFinite(value[1]);
+}
+
+/** Transforms a GeoJSON coordinate tree while preserving Polygon nesting. */
+export function transformNestedCoordinates(
+  value: unknown,
+  transform: (coordinate: [number, number]) => Coordinate,
+): unknown {
+  if (isPosition(value)) return transform([value[0], value[1]]);
+  if (!Array.isArray(value)) return null;
+  return value.map((child) => transformNestedCoordinates(child, transform));
+}
+
+function createBoundaryFeature(
+  runtime: VWorld2DRuntime,
+  boundary: SgisBoundaryFeature,
+  style: unknown,
+): VWorldFeature | null {
+  const coordinates = transformNestedCoordinates(
+    boundary.geometry.coordinates,
+    (coordinate) => runtime.ol.proj.transform(coordinate, "EPSG:5179", "EPSG:900913"),
+  );
+  if (!Array.isArray(coordinates)) return null;
+
+  let geometry: unknown;
+  try {
+    geometry = boundary.geometry.type === "Polygon"
+      ? new runtime.ol.geom.Polygon(coordinates)
+      : new runtime.ol.geom.MultiPolygon(coordinates);
+  } catch {
+    return null;
+  }
+
+  const feature = new runtime.ol.Feature({
+    geometry,
+    boundaryCode: boundary.properties.adm_cd,
+    boundaryName: boundary.properties.adm_nm,
+  });
+  feature.setStyle(style);
+  return feature;
+}
+
 export function createVWorld2DMap(
   runtime: VWorld2DRuntime,
   containerId: string,
   stations: ClimateStation[],
   onSelectStation: (stationId: string | null) => void,
+  boundaries: SgisBoundaryResponse | null = null,
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
@@ -181,6 +234,22 @@ export function createVWorld2DMap(
   const markerStyle = new runtime.ol.style.Style({
     image: new runtime.ol.style.Circle({ radius: 6, fill, stroke }),
   });
+  const boundaryStyle = new runtime.ol.style.Style({
+    fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.08)" }),
+    stroke: new runtime.ol.style.Stroke({ color: "rgba(15, 91, 96, 0.8)", width: 1.5 }),
+  });
+  if (boundaries?.sourceCrs.toUpperCase() === "EPSG:5179") {
+    const boundaryFeatures = boundaries.data.features
+      .map((boundary) => createBoundaryFeature(runtime, boundary, boundaryStyle))
+      .filter((feature): feature is VWorldFeature => feature !== null);
+    if (boundaryFeatures.length) {
+      const boundarySource = new runtime.ol.source.Vector({ features: boundaryFeatures });
+      const boundaryLayer = new runtime.ol.layer.Vector({ source: boundarySource });
+      boundaryLayer.set("name", "SGIS 시도 행정구역 경계");
+      boundaryLayer.set("sourceCrs", boundaries.sourceCrs);
+      map.addLayer(boundaryLayer);
+    }
+  }
   const features = stations.map((station) => {
     const feature = new runtime.ol.Feature({
       geometry: new runtime.ol.geom.Point(

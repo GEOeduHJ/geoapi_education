@@ -56,7 +56,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003` 적용 | 10개 도시·36,530행 백필 및 `0004` 월별 요약 조회 완료 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회·controlled snapshot CLI·공개 snapshot 읽기 UI 구현**; 첫 수업용 표의 실제 적재 대기 |
-| 5 | 2D 지도 제작기 | 1~4번의 snapshot + SGIS/VWorld 경계 | **KMA 관측소 위치 레이어·KOSIS 공개값 준비 패널·SGIS 경계 확인 패널 완료**; 지역코드 대응표 검증, 실제 면 레이어, 단계구분도, 범례 편집, 출처·분류 설정 확장 |
+| 5 | 2D 지도 제작기 | 1~4번의 snapshot + SGIS/VWorld 경계 | **KMA 관측소 위치 레이어·KOSIS 공개값 준비 패널·SGIS 경계 확인 패널·값 결합 없는 기준 면 레이어 완료**; 지역코드 대응표 검증, 단계구분도, 범례 편집, 출처·분류 설정 확장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
 | 7 | 3D 지형·입체 통계 | 5번의 공통 data contract | 3D 장면과 2D/표 fallback, 고도·배율·출처 표시 |
 | 8 | 배포·운영 QA | Vercel hostname, secrets | CI, API failure fallback, 모바일·접근성·키 노출 검사 |
@@ -124,4 +124,4 @@ node scripts/kma-climate.mjs \
   --write
 ```
 
-적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시한다. 다음 단계는 `0005_kosis_observation_access.sql` 적용 여부를 확인하고, KOSIS 검색 결과에서 첫 수업용 통계표를 확정한 뒤 controlled snapshot CLI로 메타데이터·원자료·지역코드를 Supabase에 적재하고 2D 주제 레이어로 연결하는 것이다. 현재 `/create/2d`에는 공개 snapshot의 적재 상태와 geometry 연결 대기를 표시하는 패널을 먼저 연결했다. adapter·적재·브라우저 읽기 경로는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시하고, KOSIS를 선택하면 SGIS 기준경계 면 레이어도 표시한다. 다음 단계는 `0005_kosis_observation_access.sql` 적용 여부를 확인하고, KOSIS 검색 결과에서 첫 수업용 통계표를 확정한 뒤 controlled snapshot CLI로 메타데이터·원자료·지역코드를 Supabase에 적재하고 KOSIS 지역코드와 SGIS `adm_cd` 대응표를 검증하는 것이다. 대응표가 검증된 뒤에만 2D 주제 레이어·단계구분도를 연결한다. adapter·적재·브라우저 읽기 경로는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.
