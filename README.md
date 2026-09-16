@@ -22,7 +22,7 @@ npm run dev
 - `/inquiry/2d/:activityId`, `/inquiry/3d/:activityId`, `/inquiry/chart/:activityId`: 자료 유형별 탐구 활동
 - `/status`: API 레지스트리와 브라우저 환경 상태
 
-`/create/chart`에는 KMA ASOS 일자료를 Supabase snapshot에서 읽는 기후 비교 실험이 들어 있다. 자료가 없으면 오류를 숨기지 않고 migration·수집기 실행 상태를 안내한다.
+`/create/chart`에는 KMA ASOS 일자료를 Supabase snapshot에서 읽는 기후 비교 실험이 들어 있다. 월 단위로 정렬된 장기 범위는 `climate_period_summaries` 요약 view를 사용하고, 짧거나 월 중간 범위는 일자료를 사용한다. 자료가 없으면 오류를 숨기지 않고 migration·수집기 실행 상태를 안내한다.
 
 ## 품질 확인
 

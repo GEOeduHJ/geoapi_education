@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 기후 데이터 수직 슬라이스 구현 완료
+> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 기후 데이터 수직 슬라이스·월별 요약 view 구현 완료
 >
 > 기준일: 2026-09-16
 
@@ -13,7 +13,8 @@
 - Supabase Project URL
 - 브라우저용 Publishable Key를 현재 코드의 `VITE_SUPABASE_ANON_KEY`에 설정
 - 서버용 Secret Key를 현재 코드의 `SUPABASE_SERVICE_ROLE_KEY`에 설정
-- `0001_initial_schema.sql` 및 `0002_rls_public_read.sql` 실행 여부
+- `0001_initial_schema.sql`~`0003_kma_climate.sql` 실행 여부
+- 장기 조회 최적화를 위한 `0004_climate_period_summaries.sql` 실행 여부
 - 로그인 없이 공개 읽기만 허용하는 RLS 검증 결과
 
 현재 MVP는 로그인 화면을 제공하지 않는다. 방문자는 게시된 자료와 활동을 공개적으로 읽고 사용할 수 있으며, `learner_attempts`는 브라우저에서 직접 읽거나 쓰지 못한다. 학습 기록을 저장할 필요가 생기면 로그인 도입 대신 먼저 검증·속도제한된 서버 제출 함수를 추가한다.
@@ -51,9 +52,9 @@ Vercel 배포 후 다음 두 값을 확정한다.
 
 | 순서 | 작업 | 선행조건 | 완료 기준 |
 | --- | --- | --- | --- |
-| 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, 두 migration 실행 | `data_sources`·published material read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
+| 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, `0001`~`0003` migration 실행 | `data_sources`·기후자료 read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
-| 3 | KMA 최근 10년 백필 | 2번의 작은 샘플 성공, `0003_kma_climate.sql` 적용 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 요약 생성 |
+| 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003`·`0004` 적용 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 월별 요약 조회 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | 원자료·metadata·지역코드·단위가 DB snapshot에 보존 |
 | 5 | 2D 지도 제작기 | 1~4번의 snapshot | VWorld 배경, 주제 레이어, 범례, 출처·분류 설정 저장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
@@ -107,7 +108,7 @@ Supabase source_snapshots / climate_stations / climate_daily_observations
 다음 데이터 작업 명령은 작은 샘플부터 실행한다.
 
 ```bash
-# Supabase SQL Editor에서 0003_kma_climate.sql 실행 후
+# Supabase SQL Editor에서 0003_kma_climate.sql과 0004_climate_period_summaries.sql 실행 후
 node scripts/kma-climate.mjs --from=2024-01-01 --to=2024-01-03 --stations=108,133,159 --write
 ```
 
@@ -120,4 +121,4 @@ node scripts/kma-climate.mjs \
   --write
 ```
 
-적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 현재 화면은 일자료 평균을 계산하므로, 다음 단계에서 연·월별 요약 테이블과 결측률·자료범위 지표를 추가한다.
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 월 경계 장기 범위는 `climate_period_summaries` view를 읽고, 월 중간 범위는 일자료로 정확히 계산한다. 다음 단계는 10년 백필과 KOSIS 첫 통계표 adapter다.

@@ -117,7 +117,7 @@ React 학습 화면
 
 | 데이터셋 | 최초 백필 | 이후 갱신 | 학생 화면 |
 |---|---|---|---|
-| KMA ASOS 일자료·기후통계 | 선택한 관측지점·기간을 월 단위로 분할 수집 | 월 1회 또는 새 월자료 공개 후 | `climate_city_summary` 조회 |
+| KMA ASOS 일자료·기후통계 | 선택한 관측지점·기간을 월 단위로 분할 수집 | 월 1회 또는 새 월자료 공개 후 | `climate_period_summaries` view 조회 |
 | KOSIS 통계표 | 선택한 통계표와 항목 전체를 초기 수집 | 주기·변경 공지에 따라 월 1회 또는 분기 1회 | 정규화 지표·메타데이터 조회 |
 | SGIS 통계·경계 | 기준연도별 초기 수집 | 새 총조사·경계 버전 공개 시 | 버전 고정 경계와 통계 조인 |
 | Open-Meteo Historical | 도시 좌표·기간·변수 묶음으로 초기 수집 | 자료 업데이트 정책 확인 후 월 1회 | 모델·재분석 자료로 표시된 요약값 |
@@ -139,6 +139,7 @@ React 학습 화면
 | `derived_metrics` | `input_snapshot_ids`, `formula`, `value`, `unit`, `missing_rule`, `created_at` | 평균·증감률·비율·표준화·분류 결과 |
 | `climate_stations` | `station_id`, `name_ko`, `longitude`, `latitude`, `altitude_m`, `law_code` | KMA ASOS 관측소 카탈로그. 개인정보 없이 공개 읽기 |
 | `climate_daily_observations` | `station_id`, `snapshot_id`, `observation_date`, `ta_avg`, `ta_max`, `ta_min`, `rn_day`, `ws_avg`, `hm_avg`, `ss_day`, `si_day`, `quality_flags` | KMA 일자료 정규화 행. 원자료 값은 `raw_values`, 원천 재현정보는 snapshot에 보존 |
+| `climate_period_summaries` (view) | `station_id`, `period_type`, `period_start`, `period_end`, metric 평균·유효일수 | 일자료를 월별로 집계한 브라우저 조회 계층. 원본 중복 저장 없이 장기 조회 응답량을 줄임 |
 | `materials` | `id`, `session_type`, `mode`, `title`, `recipe_json`, `status` | 제작된 지도·차트·표·3D 장면 |
 | `activities` | `material_id`, `inquiry_type`, `stages_json`, `prompt_json`, `rubric_json` | 탐구 활동과 평가 기준 |
 | `attempts` | `activity_id`, `anonymous_learner_id`, `responses_json`, `evidence_json`, `started_at` | 선택적 학습 과정 기록. 개인정보 최소화 |

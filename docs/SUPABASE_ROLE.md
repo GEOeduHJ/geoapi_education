@@ -34,6 +34,7 @@ Supabase Postgres + PostGIS
 |---|---|---|
 | 로그인·회원가입 | 사용하지 않음 | 공개 방문자로 이용 |
 | 과거 기후·통계자료 저장 | 사용 | API를 매번 호출하지 않고 DB 스냅샷 조회 (`0003_kma_climate.sql`) |
+| 장기 기후자료 조회 | 사용 | `climate_period_summaries` 월별 view로 일자료를 서버에서 집계 (`0004_climate_period_summaries.sql`) |
 | 원자료 요청정보·출처 보존 | 사용 | `data_sources`, `source_snapshots`에 저장 |
 | 공간자료·관측값 저장 | 사용 | Postgres/PostGIS와 정규화 테이블 사용 |
 | 게시된 학습자료 조회 | 사용 | `anon`/`authenticated`의 SELECT만 허용 |
@@ -69,7 +70,7 @@ Supabase Postgres + PostGIS
 - `source_snapshots`: 게시 자료가 참조하거나 공개 데이터셋으로 표시된 snapshot만 읽기
 - `learning_materials`: `status = 'published'`인 자료만 읽기
 - `inquiry_activities`: 게시 자료에 연결된 활동만 읽기
-- `climate_stations`, `climate_daily_observations`: 개인정보가 없는 검증된 기후 데이터이므로 공개 읽기
+- `climate_stations`, `climate_daily_observations`, `climate_period_summaries`: 개인정보가 없는 검증된 기후 데이터이므로 공개 읽기
 - `learner_attempts`: 브라우저 권한 자체를 제거해 직접 읽기·쓰기를 차단
 
 RLS는 “로그인 여부를 검사하는 기능”이 아니라 **같은 공개 키를 가진 모든 방문자가 볼 수 있는 행의 범위를 제한하는 데이터 접근 규칙**으로 사용한다. 상세 원칙은 [Supabase RLS 공식 문서](https://supabase.com/docs/guides/database/postgres/row-level-security)와 [API 키 공식 문서](https://supabase.com/docs/guides/getting-started/api-keys)를 따른다.
