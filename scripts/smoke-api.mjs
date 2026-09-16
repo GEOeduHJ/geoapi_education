@@ -90,6 +90,20 @@ async function request(label, url, init = {}, inspect = () => "응답 확인") {
   }
 }
 
+async function requestDenied(label, url, init = {}) {
+  try {
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(12000) });
+    const body = await response.text();
+    const passed = response.status === 401 || response.status === 403;
+    const detail = passed ? "공개 클라이언트 접근 차단 확인" : summarizeFailure(body);
+    console.log(`${passed ? "PASS" : "FAIL"}  ${label}  HTTP ${response.status}  ${detail}`);
+    return { passed, deferred: false };
+  } catch (error) {
+    console.log(`FAIL  ${label}  ${error instanceof Error ? error.message : "네트워크 오류"}`);
+    return { passed: false, deferred: false };
+  }
+}
+
 const results = [];
 
 if (env("SGIS_CONSUMER_KEY") && env("SGIS_CONSUMER_SECRET")) {
@@ -146,7 +160,11 @@ if (env("KOSIS_API_KEY")) {
 }
 
 if (env("VITE_SUPABASE_URL") && env("VITE_SUPABASE_ANON_KEY")) {
-  results.push(await request("Supabase REST", `${env("VITE_SUPABASE_URL").replace(/\/$/, "")}/rest/v1/sources?select=id&limit=1`, { headers: { apikey: env("VITE_SUPABASE_ANON_KEY"), Authorization: `Bearer ${env("VITE_SUPABASE_ANON_KEY")}` } }, ({ body }) => `${body.length} bytes`));
+  const supabaseBase = env("VITE_SUPABASE_URL").replace(/\/$/, "");
+  const publicHeaders = { apikey: env("VITE_SUPABASE_ANON_KEY"), Authorization: `Bearer ${env("VITE_SUPABASE_ANON_KEY")}` };
+  results.push(await request("Supabase REST data_sources", `${supabaseBase}/rest/v1/data_sources?select=id&limit=1`, { headers: publicHeaders }, ({ body }) => `${body.length} bytes`));
+  results.push(await request("Supabase REST published materials", `${supabaseBase}/rest/v1/learning_materials?select=id&status=eq.published&limit=1`, { headers: publicHeaders }, ({ body }) => `${body.length} bytes`));
+  results.push(await requestDenied("Supabase REST learner_attempts", `${supabaseBase}/rest/v1/learner_attempts?select=id&limit=1`, { headers: publicHeaders }));
 } else {
   console.log("SKIP  Supabase REST  프로젝트 URL/Publishable key 미설정");
 }

@@ -15,7 +15,7 @@
 - 원자료 스냅샷, 출처, 라이선스, 변환식, 파생지표의 계보
 - 교사가 만든 2D·3D·차트 자료와 학습자의 탐구 답안
 
-따라서 현재 설계의 **관계형 질의 + PostGIS + RLS + 파일 Storage + 선택적 Auth**를 한 프로젝트 안에서 유지할 수 있는 Supabase가 가장 적은 추가 인프라로 요구사항을 충족한다. Supabase는 PostGIS 확장을 대시보드에서 활성화할 수 있고, 이를 통해 Point·Polygon·LineString과 공간 인덱스를 사용할 수 있다.
+따라서 현재 설계의 **관계형 질의 + PostGIS + RLS + 파일 Storage + 선택적 Auth**를 한 프로젝트 안에서 유지할 수 있는 Supabase가 가장 적은 추가 인프라로 요구사항을 충족한다. 초기 MVP에서는 Auth를 사용하지 않고 공개 게시 자료 읽기만 허용하며, 필요할 때만 익명 제출용 서버 경로 또는 교사 계정을 추가한다. Supabase는 PostGIS 확장을 대시보드에서 활성화할 수 있고, 이를 통해 Point·Polygon·LineString과 공간 인덱스를 사용할 수 있다.
 
 - [Supabase PostGIS 안내](https://supabase.com/docs/guides/database/extensions/postgis)
 - [Supabase Database 개요](https://supabase.com/docs/guides/database/overview)
@@ -93,8 +93,7 @@ GitHub Actions
 1. Supabase 프로젝트 생성
 2. PostGIS extension 활성화
 3. `supabase/migrations/0001_initial_schema.sql` 실행
-4. 공개 자료 조회 RLS를 확인하고 교사·학습자 정책을 추가
+4. 공개 자료 조회 RLS를 확인하고, 로그인 없는 MVP에서는 `learner_attempts`의 브라우저 직접 접근을 차단
 5. KMA ASOS·KOSIS·SGIS의 작은 샘플을 적재
 6. DB 크기·응답속도·Storage 사용량을 확인
 7. 무료 플랜 한도에 맞춰 원자료 보관 범위와 백업 주기 확정
-

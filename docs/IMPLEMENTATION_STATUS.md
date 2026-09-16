@@ -17,6 +17,7 @@
 - SGIS 인증 토큰을 함수 메모리 캐시에만 보관하고 응답에는 토큰을 포함하지 않도록 구현
 - Supabase/PostGIS 초기 스키마: `data_sources` → `source_snapshots` → `geo_observations` → `learning_materials` → `inquiry_activities` → `learner_attempts`
 - 로그인 없는 공개형 MVP RLS migration: Publishable Key는 게시 자료 읽기만 허용하고, `learner_attempts`는 브라우저 직접 접근을 차단
+- 로그인 없이 사용할 수 있는 공개 이용 정책 확정: 학습 기록 저장은 서버 제출 경로를 구현할 때까지 선택 사항으로 둠
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -37,7 +38,7 @@ node scripts/smoke-api.mjs
 
 현재 VWorld 브라우저 domain은 로컬 hostname을 자동 감지한다. 운영 hostname은 `geoapieducation.vercel.app`으로 확인되었으므로 VWorld 허용목록과 Vercel Production `VITE_VWORLD_DOMAIN`에 동일하게 등록한 뒤 실제 지도 로더를 검증한다. KOSIS는 사용할 통계표의 `orgId`와 `tblId`를 먼저 확정해야 한다.
 
-2026-09-16 현재 실제 스모크 결과는 SGIS 인증 `HTTP 200 / Success`, 기상청 ASOS `HTTP 200`, 공공데이터포털 단기예보 `HTTP 200 / NORMAL_SERVICE`이다. VWorld는 운영 hostname 등록과 Production 환경변수 반영 후 지도 로더를 검증하고, KOSIS는 첫 통계표 확정 전이라 보류한다.
+2026-09-16 현재 실제 스모크 결과는 SGIS 인증 `HTTP 200 / Success`, 기상청 ASOS `HTTP 200`, 공공데이터포털 단기예보 `HTTP 200 / NORMAL_SERVICE`, VWorld 2D 로더 `HTTP 200`이다. Supabase `data_sources`·게시 자료 조회는 `HTTP 200`, `learner_attempts` 공개 조회는 `HTTP 401`로 확인했다. KOSIS는 첫 통계표 확정 전이라 보류한다.
 
 ## 다음 구현 순서
 
@@ -80,7 +81,7 @@ node scripts/smoke-api.mjs
 
 ## 현재 보류 사유
 
-- Supabase 프로젝트 URL·키는 확보했으며, `0001_initial_schema.sql`과 `0002_rls_public_read.sql`의 원격 적용 및 RLS 검증이 남아 있음
+- Supabase 프로젝트 URL·키는 확보했으며, 공개 읽기·학습기록 직접 접근 차단의 운영 REST 스모크 검증을 완료함. 스키마 재생성이나 새 프로젝트 전환 시 두 migration을 순서대로 다시 적용해야 함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
 - KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음
@@ -90,7 +91,7 @@ node scripts/smoke-api.mjs
 - `npm run typecheck`: 통과
 - `npm test`: 3개 테스트 파일·6개 테스트 통과
 - `npm run build`: Vite production build 통과
-- `node scripts/smoke-api.mjs`: SGIS·KMA ASOS·공공데이터포털 단기예보 3개 통과, 실패 0개
+- `node scripts/smoke-api.mjs`: 7개 통과, KOSIS 통계표 요청 1개 보류, 실패 0개. Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함
 - 브라우저 확인: 홈, 자료 제작 허브, 2D 제작, 3D 제작, 탐구 허브, 3D 탐구 활동, API 상태 라우트 확인
-- 운영 배포 확인: `https://geoapieducation.vercel.app/`의 홈·`/status`·`/create`·`/inquiry`·`/create/2d` 로드 확인. `/status`에서 Supabase 클라이언트 설정됨, VWorld 운영 hostname 반영 대기
+- 운영 배포 확인: `https://geoapieducation.vercel.app/`의 홈·`/status`·`/create`·`/inquiry`·`/create/2d` 로드 확인. 로컬 키 스모크에서는 VWorld 운영 hostname 로더가 성공했으며, Vercel Production 환경변수와 VWorld 허용목록은 대시보드에서 별도 확인 필요
 - 비밀값 검색: `.env.local`을 제외한 소스·문서·빌드 대상에서 발급키 패턴 미검출

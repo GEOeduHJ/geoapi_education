@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인·Vercel 배포 완료, 공개형 Supabase RLS와 저장소 초기 연결 전
+> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료
 >
 > 기준일: 2026-09-16
 
@@ -15,6 +15,8 @@
 - 서버용 Secret Key를 현재 코드의 `SUPABASE_SERVICE_ROLE_KEY`에 설정
 - `0001_initial_schema.sql` 및 `0002_rls_public_read.sql` 실행 여부
 - 로그인 없이 공개 읽기만 허용하는 RLS 검증 결과
+
+현재 MVP는 로그인 화면을 제공하지 않는다. 방문자는 게시된 자료와 활동을 공개적으로 읽고 사용할 수 있으며, `learner_attempts`는 브라우저에서 직접 읽거나 쓰지 못한다. 학습 기록을 저장할 필요가 생기면 로그인 도입 대신 먼저 검증·속도제한된 서버 제출 함수를 추가한다.
 
 Secret Key·계정 비밀번호·데이터베이스 비밀번호는 채팅이나 GitHub에 올리지 않는다. 로컬 `.env.local`과 Vercel Environment Variables에 직접 저장한다.
 
@@ -47,7 +49,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 
 | 순서 | 작업 | 선행조건 | 완료 기준 |
 | --- | --- | --- | --- |
-| 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, 두 migration 실행 | `data_sources`와 published material read가 실제 REST에서 동작하고 브라우저 쓰기는 차단 |
+| 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, 두 migration 실행 | `data_sources`·published material read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 2번의 작은 샘플 성공 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 요약 생성 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | 원자료·metadata·지역코드·단위가 DB snapshot에 보존 |
@@ -97,3 +99,5 @@ Supabase source_snapshots / geo_observations
 ```
 
 이 단위를 끝낸 뒤에 KOSIS 주제도와 3D 지형 자료를 병렬로 확장한다. 원천 API를 학생 화면에서 직접 반복 호출하지 않고, 작은 범위의 수집·검증·스냅샷 생성이 통과한 뒤 범위를 늘린다.
+
+현재 Supabase 공개 읽기 스모크 검증은 완료되었다. `data_sources`와 게시 자료 조회는 `HTTP 200`, `learner_attempts` 조회는 `HTTP 401`로 확인했다. 이 결과는 로그인 없는 공개 이용 정책과 직접 학습기록 차단 정책이 운영 프로젝트에서 작동함을 뜻한다.

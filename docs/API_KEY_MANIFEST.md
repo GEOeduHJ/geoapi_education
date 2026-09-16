@@ -56,5 +56,5 @@ VWorld 브라우저 로더의 `domain`은 API key와 별도로 현재 웹 페이
 - SGIS 인증: 성공.
 - 기상청 API 허브 ASOS: `HTTP 200` 확인.
 - 공공데이터포털 단기예보: 활용승인 후 `HTTP 200 / NORMAL_SERVICE` 확인.
-- VWorld: 로컬에서는 브라우저 hostname 자동 감지. Vercel 운영 hostname 등록 후 실제 지도 로더를 검증한다.
+- VWorld: 로컬 브라우저 hostname 자동 감지 및 운영 hostname을 사용한 로더 `HTTP 200` 확인. Vercel Production 환경변수와 VWorld 허용목록은 대시보드에서 별도 확인한다.
 - KOSIS: 키만으로는 통계표 요청 파라미터를 정할 수 없어 첫 `orgId`·`tblId` 선정 후 검증.
