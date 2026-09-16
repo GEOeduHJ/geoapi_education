@@ -1,8 +1,9 @@
-import { FormEvent, useState } from "react";
-import { searchKosisTables } from "../lib/kosis-client";
-import type { KosisSearchResult } from "../lib/kosis";
+import { FormEvent, useMemo, useState } from "react";
+import { fetchKosisMetadata, searchKosisTables } from "../lib/kosis-client";
+import type { KosisMetadataRecord, KosisSearchResult } from "../lib/kosis";
 
 type SearchStatus = "idle" | "loading" | "ready" | "error";
+type MetadataStatus = "idle" | "loading" | "ready" | "error";
 
 export function KosisTableSearch() {
   const [term, setTerm] = useState("지역별 인구");
@@ -10,6 +11,20 @@ export function KosisTableSearch() {
   const [selected, setSelected] = useState<KosisSearchResult | null>(null);
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [metadata, setMetadata] = useState<KosisMetadataRecord[]>([]);
+  const [metadataStatus, setMetadataStatus] = useState<MetadataStatus>("idle");
+  const [metadataError, setMetadataError] = useState<string | null>(null);
+
+  const metadataGroups = useMemo(() => {
+    const groups = new Map<string, { objectId: string | null; objectName: string | null; records: KosisMetadataRecord[] }>();
+    metadata.forEach((record) => {
+      const key = record.objectId ?? "unknown";
+      const group = groups.get(key) ?? { objectId: record.objectId, objectName: record.objectName, records: [] };
+      group.records.push(record);
+      groups.set(key, group);
+    });
+    return [...groups.values()];
+  }, [metadata]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,10 +33,29 @@ export function KosisTableSearch() {
     setStatus("loading");
     setError(null);
     setSelected(null);
+    setMetadata([]);
+    setMetadataStatus("idle");
+    setMetadataError(null);
     const result = await searchKosisTables(query);
     setResults(result.data);
     setError(result.error);
     setStatus(result.error ? "error" : "ready");
+  }
+
+  async function handleSelect(result: KosisSearchResult) {
+    setSelected(result);
+    setMetadata([]);
+    setMetadataError(null);
+    if (!result.organizationId || !result.tableId) {
+      setMetadataStatus("error");
+      setMetadataError("선택한 결과에 기관 코드 또는 통계표 코드가 없습니다.");
+      return;
+    }
+    setMetadataStatus("loading");
+    const response = await fetchKosisMetadata(result.organizationId, result.tableId);
+    setMetadata(response.data);
+    setMetadataError(response.error);
+    setMetadataStatus(response.error ? "error" : "ready");
   }
 
   return (
@@ -43,13 +77,29 @@ export function KosisTableSearch() {
           <strong>선택한 표</strong>
           <span>{selected.tableName ?? "이름 없는 통계표"}</span>
           <code>{selected.organizationId ?? "?"} / {selected.tableId ?? "?"}</code>
-          <small>다음 단계: `/api/kosis-meta`로 분류·항목 코드 확인</small>
+          <small>{metadataStatus === "loading" ? "분류·항목 코드를 불러오는 중…" : "분류·항목 코드 확인"}</small>
+        </div>
+      )}
+      {metadataStatus === "error" && <p className="kosis-search-message kosis-search-message--error" role="alert">{metadataError}</p>}
+      {metadataStatus === "ready" && (
+        <div className="kosis-metadata" role="status">
+          <div className="kosis-metadata__heading">
+            <strong>메타데이터 확인 완료</strong>
+            <span>{metadata.length}개 코드 · {metadataGroups.length}개 분류</span>
+          </div>
+          {metadataGroups.map((group) => (
+            <div className="kosis-metadata__group" key={group.objectId ?? "unknown"}>
+              <div><strong>{group.objectName ?? "이름 없는 분류"}</strong><code>{group.objectId ?? "?"} · {group.records.length}개</code></div>
+              <small>{group.records.slice(0, 4).map((record) => `${record.itemName ?? "이름 없음"} (${record.itemId ?? "?"})`).join(" · ")}{group.records.length > 4 ? " · …" : ""}</small>
+            </div>
+          ))}
+          <p>다음 단계에서 지도에 쓸 분류와 항목을 선택하고, 주기·기간을 입력해 제한 조회를 실행합니다.</p>
         </div>
       )}
       {results.length > 0 && (
         <div className="kosis-search-results" aria-label="KOSIS 통계표 검색 결과">
           {results.map((result, index) => (
-            <button className={`kosis-result${selected === result ? " is-selected" : ""}`} key={`${result.organizationId ?? "org"}-${result.tableId ?? index}`} type="button" onClick={() => setSelected(result)}>
+            <button className={`kosis-result${selected === result ? " is-selected" : ""}`} key={`${result.organizationId ?? "org"}-${result.tableId ?? index}`} type="button" onClick={() => void handleSelect(result)}>
               <strong>{result.tableName ?? "이름 없는 통계표"}</strong>
               <span>{result.organizationName ?? result.organizationId ?? "기관 미상"}</span>
               <code>{result.organizationId ?? "?"} / {result.tableId ?? "?"}</code>

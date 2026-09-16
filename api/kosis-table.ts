@@ -10,7 +10,7 @@ import {
 } from "../src/lib/kosis.js";
 
 const SAFE_CODE = /^[A-Za-z0-9_.-]{1,40}$/;
-const SAFE_CODE_LIST = /^[A-Za-z0-9_.-]{1,300}$/;
+const SAFE_CODE_LIST = /^[A-Za-z0-9_.,-]{1,300}$/;
 const PERIODS = new Set<KosisPeriod>(["Y", "Q", "M", "S", "D", "F", "IR"]);
 const PERIOD_PATTERN = /^\d{4,8}$/;
 

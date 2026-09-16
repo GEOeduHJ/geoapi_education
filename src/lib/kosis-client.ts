@@ -1,7 +1,7 @@
-import type { KosisSearchResult } from "./kosis";
+import type { KosisMetadataRecord, KosisSearchResult } from "./kosis";
 
-interface KosisSearchApiResponse {
-  data?: KosisSearchResult[];
+interface KosisApiResponse<T> {
+  data?: T[];
   error?: unknown;
 }
 
@@ -14,14 +14,23 @@ function responseError(error: unknown, status: number): string {
   return `KOSIS 검색 HTTP ${status}`;
 }
 
-export async function searchKosisTables(searchNm: string): Promise<{ data: KosisSearchResult[]; error: string | null }> {
-  const params = new URLSearchParams({ searchNm, sort: "RANK", startCount: "1", resultCount: "20" });
+async function requestKosis<T>(path: string, params: URLSearchParams, label: string): Promise<{ data: T[]; error: string | null }> {
   try {
-    const response = await fetch(`/api/kosis-search?${params.toString()}`, { headers: { Accept: "application/json" } });
-    const payload = (await response.json()) as KosisSearchApiResponse;
-    if (!response.ok) return { data: [], error: responseError(payload.error, response.status) };
+    const response = await fetch(`${path}?${params.toString()}`, { headers: { Accept: "application/json" } });
+    const payload = (await response.json()) as KosisApiResponse<T>;
+    if (!response.ok) return { data: [], error: responseError(payload.error, response.status).replace("KOSIS 검색", label) };
     return { data: Array.isArray(payload.data) ? payload.data : [], error: null };
   } catch {
-    return { data: [], error: "KOSIS 검색 서버에 연결하지 못했습니다." };
+    return { data: [], error: `${label} 서버에 연결하지 못했습니다.` };
   }
+}
+
+export function searchKosisTables(searchNm: string): Promise<{ data: KosisSearchResult[]; error: string | null }> {
+  const params = new URLSearchParams({ searchNm, sort: "RANK", startCount: "1", resultCount: "20" });
+  return requestKosis<KosisSearchResult>("/api/kosis-search", params, "KOSIS 검색");
+}
+
+export function fetchKosisMetadata(orgId: string, tblId: string): Promise<{ data: KosisMetadataRecord[]; error: string | null }> {
+  const params = new URLSearchParams({ orgId, tblId });
+  return requestKosis<KosisMetadataRecord>("/api/kosis-meta", params, "KOSIS 메타데이터");
 }
