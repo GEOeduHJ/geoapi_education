@@ -29,6 +29,7 @@ interface VWorldMapView {
 
 interface VWorldMap {
   addLayer(layer: VWorldLayer): void;
+  removeLayer(layer: VWorldLayer): void;
   getView(): VWorldMapView;
   forEachFeatureAtPixel(
     pixel: number[],
@@ -211,12 +212,53 @@ function createBoundaryFeature(
   return feature;
 }
 
+const boundaryLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
+
+function createBoundaryLayer(
+  runtime: VWorld2DRuntime,
+  boundaries: SgisBoundaryResponse,
+): VWorldLayer | null {
+  if (boundaries.sourceCrs.toUpperCase() !== "EPSG:5179") return null;
+  const boundaryStyle = new runtime.ol.style.Style({
+    fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.08)" }),
+    stroke: new runtime.ol.style.Stroke({ color: "rgba(15, 91, 96, 0.8)", width: 1.5 }),
+  });
+  const boundaryFeatures = boundaries.data.features
+    .map((boundary) => createBoundaryFeature(runtime, boundary, boundaryStyle))
+    .filter((feature): feature is VWorldFeature => feature !== null);
+  if (!boundaryFeatures.length) return null;
+
+  const boundarySource = new runtime.ol.source.Vector({ features: boundaryFeatures });
+  const boundaryLayer = new runtime.ol.layer.Vector({ source: boundarySource });
+  boundaryLayer.set("name", "SGIS 시도 행정구역 경계");
+  boundaryLayer.set("sourceCrs", boundaries.sourceCrs);
+  return boundaryLayer;
+}
+
+/** Adds or replaces the neutral SGIS reference layer without reinitializing VWorld. */
+export function updateVWorld2DBoundaryLayer(
+  runtime: VWorld2DRuntime,
+  map: VWorldMap,
+  boundaries: SgisBoundaryResponse | null,
+): void {
+  const previousLayer = boundaryLayerByMap.get(map);
+  if (previousLayer) {
+    map.removeLayer(previousLayer);
+    boundaryLayerByMap.delete(map);
+  }
+  if (!boundaries) return;
+
+  const boundaryLayer = createBoundaryLayer(runtime, boundaries);
+  if (!boundaryLayer) return;
+  map.addLayer(boundaryLayer);
+  boundaryLayerByMap.set(map, boundaryLayer);
+}
+
 export function createVWorld2DMap(
   runtime: VWorld2DRuntime,
   containerId: string,
   stations: ClimateStation[],
   onSelectStation: (stationId: string | null) => void,
-  boundaries: SgisBoundaryResponse | null = null,
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
@@ -234,22 +276,6 @@ export function createVWorld2DMap(
   const markerStyle = new runtime.ol.style.Style({
     image: new runtime.ol.style.Circle({ radius: 6, fill, stroke }),
   });
-  const boundaryStyle = new runtime.ol.style.Style({
-    fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.08)" }),
-    stroke: new runtime.ol.style.Stroke({ color: "rgba(15, 91, 96, 0.8)", width: 1.5 }),
-  });
-  if (boundaries?.sourceCrs.toUpperCase() === "EPSG:5179") {
-    const boundaryFeatures = boundaries.data.features
-      .map((boundary) => createBoundaryFeature(runtime, boundary, boundaryStyle))
-      .filter((feature): feature is VWorldFeature => feature !== null);
-    if (boundaryFeatures.length) {
-      const boundarySource = new runtime.ol.source.Vector({ features: boundaryFeatures });
-      const boundaryLayer = new runtime.ol.layer.Vector({ source: boundarySource });
-      boundaryLayer.set("name", "SGIS 시도 행정구역 경계");
-      boundaryLayer.set("sourceCrs", boundaries.sourceCrs);
-      map.addLayer(boundaryLayer);
-    }
-  }
   const features = stations.map((station) => {
     const feature = new runtime.ol.Feature({
       geometry: new runtime.ol.geom.Point(
@@ -279,6 +305,11 @@ export function createVWorld2DMap(
 }
 
 export function disposeVWorld2DMap(runtime: VWorld2DRuntime, map: VWorldMap): void {
+  const boundaryLayer = boundaryLayerByMap.get(map);
+  if (boundaryLayer) {
+    map.removeLayer(boundaryLayer);
+    boundaryLayerByMap.delete(map);
+  }
   map.setTarget(null);
   map.dispose?.();
   if (runtime.vw._vmap === map) runtime.vw._vmap = undefined;

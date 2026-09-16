@@ -9,6 +9,7 @@ import {
   createVWorld2DMap,
   disposeVWorld2DMap,
   loadVWorld2D,
+  updateVWorld2DBoundaryLayer,
   type VWorld2DRuntime,
 } from "../lib/vworld2d";
 import type { SgisBoundaryResponse } from "../lib/sgis";
@@ -20,6 +21,7 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
   const rawId = useId();
   const mapId = `vworld-map-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const boundariesRef = useRef(boundaries);
   const [stations, setStations] = useState<ClimateStation[]>([]);
   const [stationStatus, setStationStatus] = useState<"loading" | "ready">("loading");
   const [stationError, setStationError] = useState<string | null>(null);
@@ -43,6 +45,12 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
   }, []);
 
   useEffect(() => {
+    boundariesRef.current = boundaries;
+    const currentMap = mapRef.current;
+    if (currentMap) updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries);
+  }, [boundaries]);
+
+  useEffect(() => {
     if (stationStatus !== "ready" || !mapElementRef.current) return;
     let cancelled = false;
     setMapStatus("loading");
@@ -50,8 +58,9 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
 
     loadVWorld2D().then((runtime) => {
       if (cancelled || !mapElementRef.current) return;
-      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId, boundaries);
+      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId);
       mapRef.current = { runtime, map };
+      updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current);
       setMapStatus("ready");
     }).catch((error) => {
       if (cancelled) return;
@@ -66,7 +75,7 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
         mapRef.current = null;
       }
     };
-  }, [boundaries, mapId, stationStatus, stations]);
+  }, [mapId, stationStatus, stations]);
 
   const selectedStation = stations.find((station) => station.station_id === selectedStationId);
   const domain = resolveVWorldDomain();
@@ -97,7 +106,7 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
           <span>배경: VWorld Graphic</span>
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}
-        {mapStatus === "error" && <div className="vworld-map-message vworld-map-message--error" role="alert"><strong>지도를 불러오지 못했습니다.</strong><span>{fallbackMessage ?? "VWorld 등록 domain과 브라우저 키를 확인하세요."}</span><small>현재 domain: {domain || "미설정"}</small></div>}
+        {mapStatus === "error" && <div className="vworld-map-message vworld-map-message--error" role="alert"><strong>지도를 불러오지 못했습니다.</strong><span>{fallbackMessage ?? mapError ?? "VWorld 등록 domain과 브라우저 키를 확인하세요."}</span><small>현재 domain: {domain || "미설정"}</small></div>}
       </div>
       <div className="vworld-map-detail" aria-live="polite">
         <div>
