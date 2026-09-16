@@ -54,6 +54,8 @@ describe("KOSIS adapter", () => {
   it("parses KOSIS JSON-like responses without executing upstream text", () => {
     const payload = parseKosisResponseText('[{ORG_ID:"101",TBL_ID:"DT_TEST",DT:"1,000"}]');
     expect(payload).toEqual([{ ORG_ID: "101", TBL_ID: "DT_TEST", DT: "1,000" }]);
+    expect(parseKosisResponseText('{ORG_ID:"101",TBL_ID:"DT_TEST"}')).toEqual({ ORG_ID: "101", TBL_ID: "DT_TEST" });
+    expect(parseKosisResponseText('[{ITEM03:"비율 = "Pt" / "P0""}]')).toEqual([{ ITEM03: '비율 = "Pt" / "P0"' }]);
     expect(parseKosisResponseText("not-json")).toBeNull();
   });
 

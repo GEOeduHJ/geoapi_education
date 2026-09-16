@@ -160,23 +160,164 @@ export function buildKosisMetadataUrl(apiKey: string, query: KosisMetadataQuery)
   return url.toString();
 }
 
+function skipWhitespace(text: string, start: number): number {
+  let index = start;
+  while (/\s/.test(text[index] ?? "")) index += 1;
+  return index;
+}
+
+function looksLikeObjectKey(text: string, start: number): boolean {
+  let index = skipWhitespace(text, start);
+  if (text[index] === '"') {
+    index += 1;
+    while (index < text.length) {
+      if (text[index] === "\\") {
+        index += 2;
+        continue;
+      }
+      if (text[index] === '"') return text[skipWhitespace(text, index + 1)] === ":";
+      index += 1;
+    }
+    return false;
+  }
+  const match = text.slice(index).match(/^[A-Za-z_][A-Za-z0-9_]*/);
+  return Boolean(match && text[skipWhitespace(text, index + match[0].length)] === ":");
+}
+
 /**
- * KOSIS may return JavaScript-like JSON with unquoted property names even
- * when format=json is requested. Normalize only object keys and parse it as
- * data; never execute the upstream text as code.
+ * KOSIS may return JavaScript-like JSON with unquoted property names and
+ * occasionally unescaped quotation marks inside a description string even
+ * when format=json is requested. Parse only the supported data grammar;
+ * never execute the upstream text as code.
  */
+function parseKosisJsonLike(text: string): unknown {
+  let index = 0;
+
+  function parseString(mode: "key" | "object-value" | "array-value"): string {
+    index += 1;
+    let value = "";
+    while (index < text.length) {
+      const character = text[index];
+      index += 1;
+      if (character === "\\") {
+        const escaped = text[index];
+        index += 1;
+        if (escaped === "u") {
+          const hex = text.slice(index, index + 4);
+          if (!/^[0-9A-Fa-f]{4}$/.test(hex)) throw new Error("Invalid unicode escape");
+          value += String.fromCharCode(Number.parseInt(hex, 16));
+          index += 4;
+        } else {
+          value += ({ b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" } as Record<string, string>)[escaped] ?? escaped;
+        }
+        continue;
+      }
+      if (character !== '"') {
+        value += character;
+        continue;
+      }
+
+      const next = skipWhitespace(text, index);
+      const closesKey = mode === "key" && text[next] === ":";
+      const closesValue = mode === "array-value"
+        ? [",", "]", "}"].includes(text[next] ?? "")
+        : text[next] === "}" || text[next] === "]" || (text[next] === "," && looksLikeObjectKey(text, next + 1));
+      if (closesKey || closesValue || next >= text.length) return value;
+      value += '"';
+    }
+    throw new Error("Unterminated string");
+  }
+
+  function parseBareValue(): unknown {
+    const start = index;
+    while (index < text.length && !/[,}\]]/.test(text[index])) index += 1;
+    const token = text.slice(start, index).trim();
+    if (!token || token === "null" || token === "undefined" || token === "NaN") return null;
+    if (token === "true") return true;
+    if (token === "false") return false;
+    if (/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(token)) return Number(token);
+    return token;
+  }
+
+  function parseValue(mode: "object-value" | "array-value" = "array-value"): unknown {
+    index = skipWhitespace(text, index);
+    const character = text[index];
+    if (character === "{") return parseObject();
+    if (character === "[") return parseArray();
+    if (character === '"') return parseString(mode);
+    return parseBareValue();
+  }
+
+  function parseObject(): Record<string, unknown> {
+    index += 1;
+    const object: Record<string, unknown> = {};
+    index = skipWhitespace(text, index);
+    if (text[index] === "}") {
+      index += 1;
+      return object;
+    }
+    while (index < text.length) {
+      index = skipWhitespace(text, index);
+      const key = text[index] === '"' ? parseString("key") : parseBareKey();
+      index = skipWhitespace(text, index);
+      if (text[index] !== ":") throw new Error("Expected object colon");
+      index += 1;
+      object[key] = parseValue("object-value");
+      index = skipWhitespace(text, index);
+      if (text[index] === "}") {
+        index += 1;
+        return object;
+      }
+      if (text[index] !== ",") throw new Error("Expected object comma");
+      index += 1;
+    }
+    throw new Error("Unterminated object");
+  }
+
+  function parseBareKey(): string {
+    const start = index;
+    while (index < text.length && !/[:\s]/.test(text[index])) index += 1;
+    const key = text.slice(start, index).trim();
+    if (!key) throw new Error("Empty object key");
+    return key;
+  }
+
+  function parseArray(): unknown[] {
+    index += 1;
+    const array: unknown[] = [];
+    index = skipWhitespace(text, index);
+    if (text[index] === "]") {
+      index += 1;
+      return array;
+    }
+    while (index < text.length) {
+      array.push(parseValue("array-value"));
+      index = skipWhitespace(text, index);
+      if (text[index] === "]") {
+        index += 1;
+        return array;
+      }
+      if (text[index] !== ",") throw new Error("Expected array comma");
+      index += 1;
+    }
+    throw new Error("Unterminated array");
+  }
+
+  const result = parseValue();
+  index = skipWhitespace(text, index);
+  if (index !== text.length) throw new Error("Unexpected trailing data");
+  return result;
+}
+
 export function parseKosisResponseText(text: string): unknown {
   const normalized = text.trim().replace(/^\uFEFF/, "");
   if (!normalized) return null;
+  if (!/^[\[{]/.test(normalized)) return null;
   try {
     return JSON.parse(normalized) as unknown;
   } catch {
-    const jsonLike = normalized
-      .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
-      .replace(/:\s*undefined\b/g, ":null")
-      .replace(/:\s*NaN\b/g, ":null");
     try {
-      return JSON.parse(jsonLike) as unknown;
+      return parseKosisJsonLike(normalized);
     } catch {
       return null;
     }
