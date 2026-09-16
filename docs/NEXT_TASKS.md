@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 기후 데이터 수직 슬라이스 구현 중
+> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 기후 데이터 수직 슬라이스 구현 완료
 >
 > 기준일: 2026-09-16
 
@@ -93,7 +93,7 @@ KMA ASOS station info
       +
 KMA ASOS daily period data
       ↓
-Supabase source_snapshots / geo_observations
+Supabase source_snapshots / climate_stations / climate_daily_observations
       ↓
 최근 10년 주요 도시 기후 비교표
       ↓
@@ -110,3 +110,14 @@ Supabase source_snapshots / geo_observations
 # Supabase SQL Editor에서 0003_kma_climate.sql 실행 후
 node scripts/kma-climate.mjs --from=2024-01-01 --to=2024-01-03 --stations=108,133,159 --write
 ```
+
+작은 적재가 성공한 뒤 운영 범위를 늘린다.
+
+```bash
+node scripts/kma-climate.mjs \
+  --from=2016-01-01 --to=2025-12-31 \
+  --stations=101,105,108,112,133,143,146,156,159,184 \
+  --write
+```
+
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 현재 화면은 일자료 평균을 계산하므로, 다음 단계에서 연·월별 요약 테이블과 결측률·자료범위 지표를 추가한다.
