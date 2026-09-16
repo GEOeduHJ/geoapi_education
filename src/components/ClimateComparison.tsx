@@ -37,8 +37,10 @@ function isMonthAlignedRange(from: string, to: string): boolean {
 }
 
 function formatCoverage(ratio: number): string {
-  const percent = Math.round(ratio * 100);
-  return ratio > 0 && percent === 0 ? "<1%" : `${percent}%`;
+  const percent = ratio * 100;
+  if (percent > 0 && percent < 1) return "<1%";
+  if (percent === 100) return "100%";
+  return `${percent.toFixed(1)}%`;
 }
 
 export function ClimateComparison() {

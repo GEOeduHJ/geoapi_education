@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
+import { VWorld2DMap } from "../components/VWorld2DMap";
 
 const recipes = [
   { label: "관계형", title: "2D 지도자료", description: "분포·밀도·접근성·변화를 평면 지도와 레이어로 구성", to: "/create/2d", accent: "teal" },
@@ -93,25 +94,31 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
 
       <WorkspaceNotice
         dimension={dimension}
-        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : "VWorld 2D 지도 초기화 계약과 KOSIS·SGIS·주소 레이어를 연결할 자리입니다."}
+        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : "VWorld 2D 배경에 KMA ASOS 관측소를 올려 자료 제작의 공간 기준을 확인합니다. 다음 단계에서 KOSIS·SGIS 주제 레이어를 추가합니다."}
       />
 
       <section className="workspace-grid">
-        <div className="map-stage map-stage--empty">
-          <div className="map-stage__grid" />
-          <div className="map-stage__center">
-            <span className="map-stage__pin">＋</span>
-            <strong>{dimension} 렌더러 연결 대기</strong>
-            <p>다음 단계에서 지도 라이브러리와 데이터 어댑터를 연결합니다.</p>
+        {isThreeD ? (
+          <div className="map-stage map-stage--empty">
+            <div className="map-stage__grid" />
+            <div className="map-stage__center">
+              <span className="map-stage__pin">＋</span>
+              <strong>3D 렌더러 연결 대기</strong>
+              <p>다음 단계에서 VWorld WebGL 3D와 고도 데이터 어댑터를 연결합니다.</p>
+            </div>
+            <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
           </div>
-          <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
-        </div>
+        ) : (
+          <div className="map-stage map-stage--live">
+            <VWorld2DMap />
+          </div>
+        )}
         <aside className="workspace-sidebar">
           <div className="sidebar-section">
             <p className="eyebrow">01 · DATA SOURCE</p>
             <h3>자료 소스 선택</h3>
             <label className="field-label" htmlFor="source-select">기본 데이터</label>
-            <select id="source-select" defaultValue={isThreeD ? "kma-hub" : "kosis"}>
+            <select id="source-select" defaultValue="kma-hub">
               <option value="kosis">KOSIS 통계</option>
               <option value="sgis-data">SGIS 공간통계</option>
               <option value="kma-hub">기상청 ASOS</option>

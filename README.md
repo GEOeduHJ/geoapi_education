@@ -15,7 +15,7 @@ npm run dev
 ## 주요 경로
 
 - `/create`: 자료 제작 허브
-- `/create/2d`: VWorld 2D 지도자료 작업공간 계약
+- `/create/2d`: VWorld 2D 지도자료 작업공간과 KMA ASOS 관측소 레이어
 - `/create/3d`: VWorld 3D 지도자료 작업공간 계약
 - `/create/chart`: 통계·차트자료 작업공간 계약
 - `/inquiry`: 6단계 자료 탐구 허브
