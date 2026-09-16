@@ -27,7 +27,7 @@ export function KosisBoundaryJoinStatusPanel({
           <p className="eyebrow">KOSIS × SGIS / EXACT CODE JOIN</p>
           <h4 id="kosis-join-panel-title">지도값 결합 상태</h4>
         </div>
-        <span>색상 보류</span>
+        <span>{result.status === "ready" ? "색상 표시" : "색상 보류"}</span>
       </div>
 
       {loading && <p className="kosis-join-panel__message" role="status">공개값과 행정경계를 함께 확인하는 중입니다…</p>}
@@ -64,7 +64,7 @@ export function KosisBoundaryJoinStatusPanel({
       )}
       {!loading && !error && result.status === "ready" && (
         <div className="kosis-join-panel__message kosis-join-panel__message--ready" role="status">
-          <strong>정확히 일치한 지역 {result.matchedCount}개 — 단계구분도 연결 가능</strong>
+          <strong>정확히 일치한 지역 {result.matchedCount}개 — 단계구분도 표시 조건 충족</strong>
           <span>코드가 같은 값만 결합했습니다. 경계가 비어 있는 지역은 {result.missingBoundaryCount}개입니다.</span>
           <small>{result.periods.join(", ")} · {result.units.join(", ")}</small>
         </div>

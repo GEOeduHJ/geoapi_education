@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { epsg5179ToWebMercator, extractVWorldScriptUrls, transformNestedCoordinates } from "./vworld2d";
+import { epsg5179ToWebMercator, extractVWorldScriptUrls, getChoroplethColor, transformNestedCoordinates } from "./vworld2d";
 
 describe("VWorld 2D loader helpers", () => {
   it("extracts document.write script URLs without interpreting the markup", () => {
@@ -28,5 +28,12 @@ describe("VWorld 2D loader helpers", () => {
     const [x, y] = epsg5179ToWebMercator([953932, 1952053]);
     expect(x).toBeCloseTo(14135165, 0);
     expect(y).toBeCloseTo(4518393, 0);
+  });
+
+  it("uses a bounded five-step sequential palette for thematic values", () => {
+    expect(getChoroplethColor(0, 0, 100)).not.toBe(getChoroplethColor(100, 0, 100));
+    expect(getChoroplethColor(0, 0, 100)).toBe(getChoroplethColor(-20, 0, 100));
+    expect(getChoroplethColor(100, 0, 100)).toBe(getChoroplethColor(120, 0, 100));
+    expect(getChoroplethColor(50, 50, 50)).toContain("rgba");
   });
 });

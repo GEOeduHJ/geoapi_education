@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_CLIMATE_STATION_IDS,
   fetchClimateStations,
@@ -12,16 +12,24 @@ import {
   updateVWorld2DBoundaryLayer,
   type VWorld2DRuntime,
 } from "../lib/vworld2d";
+import type { BoundaryJoinValue } from "../lib/geo-join";
 import type { SgisBoundaryResponse } from "../lib/sgis";
 
 type MapStatus = "idle" | "loading" | "ready" | "error";
 
-export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryResponse | null }) {
+export function VWorld2DMap({
+  boundaries = null,
+  boundaryValues = null,
+}: {
+  boundaries?: SgisBoundaryResponse | null;
+  boundaryValues?: Record<string, BoundaryJoinValue> | null;
+}) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
   const rawId = useId();
   const mapId = `vworld-map-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const boundariesRef = useRef(boundaries);
+  const boundaryValuesRef = useRef(boundaryValues);
   const [stations, setStations] = useState<ClimateStation[]>([]);
   const [stationStatus, setStationStatus] = useState<"loading" | "ready">("loading");
   const [stationError, setStationError] = useState<string | null>(null);
@@ -46,9 +54,10 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
 
   useEffect(() => {
     boundariesRef.current = boundaries;
+    boundaryValuesRef.current = boundaryValues;
     const currentMap = mapRef.current;
-    if (currentMap) updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries);
-  }, [boundaries]);
+    if (currentMap) updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries, boundaryValues);
+  }, [boundaries, boundaryValues]);
 
   useEffect(() => {
     if (stationStatus !== "ready" || !mapElementRef.current) return;
@@ -60,7 +69,7 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
       if (cancelled || !mapElementRef.current) return;
       const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId);
       mapRef.current = { runtime, map };
-      updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current);
+      updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
       setMapStatus("ready");
     }).catch((error) => {
       if (cancelled) return;
@@ -77,6 +86,18 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
     };
   }, [mapId, stationStatus, stations]);
 
+  const thematicSummary = useMemo(() => {
+    const entries = Object.values(boundaryValues ?? {});
+    if (!entries.length) return null;
+    const numericValues = entries.map((entry) => entry.value).filter((value) => Number.isFinite(value));
+    if (!numericValues.length) return null;
+    return {
+      count: numericValues.length,
+      min: Math.min(...numericValues),
+      max: Math.max(...numericValues),
+      unit: entries.find((entry) => entry.unit)?.unit ?? null,
+    };
+  }, [boundaryValues]);
   const selectedStation = stations.find((station) => station.station_id === selectedStationId);
   const domain = resolveVWorldDomain();
   const fallbackMessage = !hasVWorldClientConfig
@@ -99,10 +120,12 @@ export function VWorld2DMap({ boundaries = null }: { boundaries?: SgisBoundaryRe
           <span>VWORLD 2D · KMA ASOS</span>
           <span>{stations.length ? `${stations.length}개 관측소` : "관측소 불러오는 중"}</span>
           {boundaries && <span>{boundaries.data.features.length}개 경계</span>}
+          {thematicSummary && <span>{thematicSummary.count}개 값</span>}
         </div>
         <div className="vworld-map-legend" aria-label="지도 범례">
           <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>
-          {boundaries && <span><i className="vworld-map-legend__area" />SGIS 시도 경계</span>}
+          {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? " · KOSIS 값" : ""}</span>}
+          {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
           <span>배경: VWorld Graphic</span>
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}

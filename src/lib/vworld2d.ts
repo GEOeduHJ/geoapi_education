@@ -1,6 +1,7 @@
 import { buildVWorldLoaderUrl } from "./api/requests";
 import { hasVWorldClientConfig, publicEnv, resolveVWorldDomain } from "./env";
 import type { ClimateStation } from "./climate";
+import type { BoundaryJoinValue } from "./geo-join";
 import type { SgisBoundaryFeature, SgisBoundaryResponse } from "./sgis";
 
 type Coordinate = [number, number];
@@ -270,33 +271,76 @@ function createBoundaryFeature(
 }
 
 const boundaryLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
+const CHOROPLETH_COLORS = [
+  "rgba(229, 241, 236, 0.76)",
+  "rgba(167, 218, 198, 0.78)",
+  "rgba(91, 181, 157, 0.80)",
+  "rgba(32, 133, 125, 0.82)",
+  "rgba(15, 78, 78, 0.84)",
+] as const;
+
+/** Returns a five-step sequential color for a finite numeric value. */
+export function getChoroplethColor(value: number, min: number, max: number): string {
+  if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max)) {
+    return "rgba(15, 139, 141, 0.08)";
+  }
+  const ratio = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0.5;
+  return CHOROPLETH_COLORS[Math.round(ratio * (CHOROPLETH_COLORS.length - 1))];
+}
 
 function createBoundaryLayer(
   runtime: VWorld2DRuntime,
   boundaries: SgisBoundaryResponse,
+  values: Record<string, BoundaryJoinValue> | null,
 ): VWorldLayer | null {
   if (boundaries.sourceCrs.toUpperCase() !== "EPSG:5179") return null;
-  const boundaryStyle = new runtime.ol.style.Style({
-    fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.08)" }),
-    stroke: new runtime.ol.style.Stroke({ color: "rgba(15, 91, 96, 0.8)", width: 1.5 }),
-  });
+  const numericValues = Object.values(values ?? {})
+    .map((entry) => entry.value)
+    .filter((value) => Number.isFinite(value));
+  const min = numericValues.length ? Math.min(...numericValues) : null;
+  const max = numericValues.length ? Math.max(...numericValues) : null;
+  const stylesByFill = new Map<string, unknown>();
+  const getStyle = (fillColor: string) => {
+    const cached = stylesByFill.get(fillColor);
+    if (cached) return cached;
+    const style = new runtime.ol.style.Style({
+      fill: new runtime.ol.style.Fill({ color: fillColor }),
+      stroke: new runtime.ol.style.Stroke({ color: "rgba(15, 91, 96, 0.8)", width: 1.5 }),
+    });
+    stylesByFill.set(fillColor, style);
+    return style;
+  };
   const boundaryFeatures = boundaries.data.features
-    .map((boundary) => createBoundaryFeature(runtime, boundary, boundaryStyle))
+    .map((boundary) => {
+      const code = boundary.properties.adm_cd?.trim() ?? "";
+      const value = values?.[code]?.value;
+      const fillColor = min !== null && max !== null && typeof value === "number"
+        ? getChoroplethColor(value, min, max)
+        : "rgba(15, 139, 141, 0.08)";
+      return createBoundaryFeature(runtime, boundary, getStyle(fillColor));
+    })
     .filter((feature): feature is VWorldFeature => feature !== null);
   if (!boundaryFeatures.length) return null;
 
   const boundarySource = new runtime.ol.source.Vector({ features: boundaryFeatures });
   const boundaryLayer = new runtime.ol.layer.Vector({ source: boundarySource });
-  boundaryLayer.set("name", "SGIS 시도 행정구역 경계");
+  boundaryLayer.set("name", min !== null ? "SGIS 시도 행정구역 · KOSIS 단계구분도" : "SGIS 시도 행정구역 경계");
   boundaryLayer.set("sourceCrs", boundaries.sourceCrs);
+  boundaryLayer.set("joinStatus", min !== null ? "ready" : "reference");
+  if (min !== null && max !== null) {
+    boundaryLayer.set("valueMin", min);
+    boundaryLayer.set("valueMax", max);
+    boundaryLayer.set("valueCount", numericValues.length);
+  }
   return boundaryLayer;
 }
 
-/** Adds or replaces the neutral SGIS reference layer without reinitializing VWorld. */
+/** Adds or replaces the SGIS reference/thematic layer without reinitializing VWorld. */
 export function updateVWorld2DBoundaryLayer(
   runtime: VWorld2DRuntime,
   map: VWorldMap,
   boundaries: SgisBoundaryResponse | null,
+  values: Record<string, BoundaryJoinValue> | null = null,
 ): void {
   const previousLayer = boundaryLayerByMap.get(map);
   if (previousLayer) {
@@ -305,7 +349,7 @@ export function updateVWorld2DBoundaryLayer(
   }
   if (!boundaries) return;
 
-  const boundaryLayer = createBoundaryLayer(runtime, boundaries);
+  const boundaryLayer = createBoundaryLayer(runtime, boundaries, values);
   if (!boundaryLayer) return;
   map.addLayer(boundaryLayer);
   boundaryLayerByMap.set(map, boundaryLayer);

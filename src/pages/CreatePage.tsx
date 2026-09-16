@@ -174,7 +174,10 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
           </div>
         ) : (
           <div className="map-stage map-stage--live">
-            <VWorld2DMap boundaries={source === "kosis" ? sgisBoundaries : null} />
+            <VWorld2DMap
+              boundaries={source === "kosis" ? sgisBoundaries : null}
+              boundaryValues={source === "kosis" && boundaryJoin.status === "ready" ? boundaryJoin.values : null}
+            />
           </div>
         )}
         <aside className="workspace-sidebar">
