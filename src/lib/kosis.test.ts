@@ -34,6 +34,20 @@ describe("KOSIS adapter", () => {
     expect(url).toContain("apiKey=api-key%3Dwith-equals");
   });
 
+  it("omits optional classification levels when a table has one dimension", () => {
+    const url = new URL(buildKosisTableUrl("key", {
+      orgId: "101",
+      tblId: "DT_ONE_LEVEL",
+      objL1: "27",
+      itmId: "T20",
+      prdSe: "Y",
+      newEstPrdCnt: 1,
+    }));
+
+    expect(url.searchParams.get("objL1")).toBe("27");
+    expect(url.searchParams.has("objL2")).toBe(false);
+  });
+
   it("builds a bounded search URL", () => {
     const url = buildKosisSearchUrl("key", { searchNm: "지역별 인구", sort: "RANK", resultCount: 10 });
     expect(url).toContain("searchNm=%EC%A7%80%EC%97%AD%EB%B3%84+%EC%9D%B8%EA%B5%AC");

@@ -71,7 +71,6 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
   const orgId = code(queryParam(request, "orgId"));
   const tblId = code(queryParam(request, "tblId"));
   const objL1 = code(queryParam(request, "objL1"), true);
-  const objL2 = code(queryParam(request, "objL2"), true) ?? "ALL";
   const itmId = code(queryParam(request, "itmId"), true);
   const prdSe = queryParam(request, "prdSe")?.trim().toUpperCase() as KosisPeriod | undefined;
   const startPrdDe = queryParam(request, "startPrdDe")?.trim();
@@ -94,22 +93,11 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
   if (outputFields && !/^[A-Za-z0-9_,]{1,500}$/.test(outputFields)) return { error: "INVALID_KOSIS_OUTPUT_FIELDS" };
   if (smblChk && smblChk !== "Y" && smblChk !== "N") return { error: "INVALID_KOSIS_SYMBOL_OPTION" };
 
-  const classificationValues = [objL1, objL2];
-  for (const level of [2, 3, 4, 5, 6, 7, 8]) {
-    const rawValue = queryParam(request, `objL${level}`)?.trim();
-    const value = code(rawValue, true);
-    if (rawValue && !value) return { error: "INVALID_KOSIS_CLASSIFICATION_PARAMETERS" };
-    if (value) classificationValues.push(value);
-  }
-  const periods = estimatePeriods(prdSe, startPrdDe, endPrdDe, newEstPrdCnt);
-  const estimatedCells = classificationValues.reduce((total, value) => total * countCodes(value), 1) * countCodes(itmId) * periods;
-  if (!Number.isFinite(periods) || periods < 1 || periods > (prdSe === "D" ? 366 : 120) || estimatedCells > 40_000) return { error: "KOSIS_REQUEST_LIMIT" };
-
+  const classificationValues = [objL1];
   const query: KosisTableQuery = {
     orgId,
     tblId,
     objL1,
-    objL2,
     itmId,
     prdSe,
     ...(startPrdDe ? { startPrdDe, endPrdDe } : {}),
@@ -119,9 +107,18 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
     ...(smblChk ? { smblChk: smblChk as "Y" | "N" } : {}),
   };
   for (const level of [2, 3, 4, 5, 6, 7, 8] as const) {
-    const value = code(queryParam(request, `objL${level}`), true);
-    if (value) query[`objL${level}`] = value;
+    const rawValue = queryParam(request, `objL${level}`)?.trim();
+    const value = code(rawValue, true);
+    if (rawValue && !value) return { error: "INVALID_KOSIS_CLASSIFICATION_PARAMETERS" };
+    if (value) {
+      classificationValues.push(value);
+      query[`objL${level}`] = value;
+    }
   }
+  const periods = estimatePeriods(prdSe, startPrdDe, endPrdDe, newEstPrdCnt);
+  const estimatedCells = classificationValues.reduce((total, value) => total * countCodes(value), 1) * countCodes(itmId) * periods;
+  if (!Number.isFinite(periods) || periods < 1 || periods > (prdSe === "D" ? 366 : 120) || estimatedCells > 40_000) return { error: "KOSIS_REQUEST_LIMIT" };
+
   return { query };
 }
 

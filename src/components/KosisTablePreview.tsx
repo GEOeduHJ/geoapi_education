@@ -51,6 +51,12 @@ function classificationLabel(record: KosisRecord): string {
   return label || "분류값 없음";
 }
 
+function previewCodes(records: KosisMetadataRecord[]): string {
+  const topLevel = records.filter((record) => !record.parentItemId);
+  const candidates = topLevel.length > 0 ? topLevel : records;
+  return candidates.slice(0, 3).map((record) => record.itemId).filter(Boolean).join(" ");
+}
+
 export function KosisTablePreview({ selected, metadata }: KosisTablePreviewProps) {
   const groups = useMemo(() => groupMetadata(metadata), [metadata]);
   const dimensions = useMemo(() => groups.filter((group) => group.objectId !== "ITEM"), [groups]);
@@ -79,7 +85,7 @@ export function KosisTablePreview({ selected, metadata }: KosisTablePreviewProps
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const firstDimension = dimensions[0];
-    const firstCodes = firstDimension?.records.slice(0, 3).map((record) => record.itemId).filter(Boolean).join(" ") ?? "";
+    const firstCodes = firstDimension ? previewCodes(firstDimension.records) : "";
     if (!selected.organizationId || !selected.tableId || !firstCodes || !itemId) {
       setStatus("error");
       setError("통계표의 분류 또는 항목 코드가 없어 값을 조회할 수 없습니다.");
@@ -100,7 +106,7 @@ export function KosisTablePreview({ selected, metadata }: KosisTablePreviewProps
       const codes = group.records.length <= 20
         ? group.records.map((record) => record.itemId).filter(Boolean).join(" ")
         : "ALL";
-      (query as unknown as Record<string, string>)[`objL${index + 2}`] = codes || "ALL";
+      if (codes) (query as unknown as Record<string, string>)[`objL${index + 2}`] = codes;
     });
 
     setStatus("loading");
@@ -121,7 +127,7 @@ export function KosisTablePreview({ selected, metadata }: KosisTablePreviewProps
         </div>
         <span>저장 전 확인</span>
       </div>
-      <p className="kosis-table-preview__description">첫 분류값 최대 3개와 나머지 분류 전체를 사용해 원자료를 확인합니다. 실제 수업 자료로 저장하기 전 단위·주기·지역 범위를 검토하세요.</p>
+      <p className="kosis-table-preview__description">첫 분류의 최상위 값 최대 3개와 추가 분류를 사용해 원자료를 확인합니다. 실제 수업 자료로 저장하기 전 단위·주기·지역 범위를 검토하세요.</p>
       <form className="kosis-preview-form" onSubmit={handleSubmit}>
         <label>항목<select value={itemId} onChange={(event) => setItemId(event.target.value)} disabled={items.length === 0}>
           {items.map((item) => <option key={item.itemId ?? item.itemName} value={item.itemId ?? ""}>{item.itemName ?? item.itemId ?? "이름 없음"}</option>)}

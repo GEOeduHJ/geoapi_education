@@ -1,6 +1,6 @@
 # KOSIS adapter 계약
 
-> 기준일: 2026-09-16
+> 기준일: 2026-09-17
 
 이번 단계에서는 KOSIS 키를 브라우저에 노출하지 않고, 통계표를 검색한 뒤 메타데이터와 제한된 통계값을 조회하는 서버 adapter를 추가했다. 실제 표를 임의로 선택하지 않았으므로 아직 특정 KOSIS 값은 사이트에 하드코딩하지 않는다.
 
@@ -56,7 +56,7 @@ GET /api/kosis-meta?orgId=101&tblId=DT_...
 GET /api/kosis-table?orgId=101&tblId=DT_...&objL1=11+26&objL2=ALL&itmId=ITM_...&prdSe=Y&startPrdDe=2016&endPrdDe=2025&smblChk=Y
 ```
 
-KOSIS URL 생성기는 같은 분류·항목 목록을 `+`로 이어 붙이는 형식을 사용한다. 애플리케이션은 입력에서 쉼표 또는 공백을 허용하지만, 원천 요청을 만들 때는 공백 구분으로 정규화한다. `objL2`가 없는 요청은 `ALL`로 보완해 한 단계 분류만 있는 표도 원천 API의 URL 생성 규칙과 맞춘다. 두 번째 분류 이상을 특정하려면 메타데이터에서 확인한 코드를 `objL2`~`objL8`에 명시한다.
+KOSIS URL 생성기는 같은 분류·항목 목록을 `+`로 이어 붙이는 형식을 사용한다. 애플리케이션은 입력에서 쉼표 또는 공백을 허용하지만, 원천 요청을 만들 때는 공백 구분으로 정규화한다. `objL2`~`objL8`은 메타데이터에서 실제로 사용하는 추가 분류가 확인될 때만 보낸다. 한 단계 분류만 있는 표에 `objL2=ALL`을 무조건 붙이면 제공기관이 잘못된 요청 변수(오류 21)로 거절할 수 있다. 추가 분류 전체를 요청할 때 `ALL`이 유효한 표라면 그 값을 명시적으로 전달한다.
 
 지원하는 KOSIS 주기 코드는 다음과 같다.
 
@@ -104,6 +104,7 @@ KOSIS URL 생성기는 같은 분류·항목 목록을 `+`로 이어 붙이는 �
 - 원자료 응답과 metadata, 요청 파라미터, checksum을 `source_snapshots.raw_payload`에 저장한다.
 - 각 값은 KOSIS 분류·항목·시점 조합으로 deterministic `external_id`를 만들어 반복 적재를
   upsert한다. 이를 위해 `0005_kosis_observation_access.sql`의 unique index가 필요하다.
+- 한 단계 분류 표는 `objL2`를 생략해 원천 요청을 재현한다. `ALL`은 표의 메타데이터와 제공기관 응답으로 유효성이 확인된 추가 분류에만 사용한다.
 - KOSIS 자체 응답에는 geometry가 없으므로 `geo_observations.region_code`를 보존하고,
   다음 2D 단계에서 SGIS/VWorld 행정구역 geometry와 별도로 조인한다.
 - `0005_kosis_observation_access.sql`은 Supabase SQL Editor에서 한 번 실행해야 한다. 이 migration은
@@ -145,8 +146,10 @@ controlled snapshot을 Supabase에 적재한다. 그 snapshot의 `region_code`�
 
 반복 수집이 필요하면 GitHub Actions의 `KOSIS snapshot ingest` workflow를 수동 실행할 수 있다.
 GitHub repository secrets에 `KOSIS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를
-등록하고, workflow 입력에는 표 코드·분류·항목·기간만 넣는다. service key는 workflow 로그나
-브라우저에 출력하지 않는다.
+등록하고, workflow 입력에는 표 코드·분류·항목·기간을 넣는다. `obj_l2`는 한 단계 분류 표에서
+비워 둔다. `write=false`가 기본값인 DRY-RUN이며, 실제 Supabase 적재는 `write=true`를 명시해야
+한다. `publish=true`는 `write=true`와 함께 지정하지 않으면 workflow가 실패한다. service key는
+workflow 로그나 브라우저에 출력하지 않는다.
 
 ## 공개 브라우저 읽기 계약
 
@@ -167,3 +170,12 @@ Publishable Key의 공개 SELECT RLS만 사용한다.
 작업의 권한 경계가 유지된다.
 
 2026-09-16 운영 검증에서는 `101 / DT_1YL12001E` 표에 `objL1=21010+21020`, `objL2=ALL`, `itmId=T001`을 적용해 8개 정규화 레코드를 확인했다. 2026-09-17에는 같은 요청을 새 snapshot 수집기 dry-run으로 재검증했다. 이 표의 원천 응답 주기는 요청값과 별개로 `M`으로 반환되었으므로, 저장 전에는 응답의 `PRD_SE`와 단위를 다시 확인한다.
+
+2026-09-17에는 단일 분류 표 호환성도 확인했다. `101 / DT_1YL20651E`의 메타데이터에서
+`T20=계`와 `행정구역별` 분류를 확인했고, KOSIS 표의 지역코드는 SGIS의 시도 `adm_cd`와
+다른 체계를 사용하므로 직접 주제도 후보에서 제외했다. `101 / DT_1YL21281`의
+`T10=인구천명당 도시공원조성면적(A÷B×1000)`에 SGIS와 일치하는 15개 시도 코드,
+`prdSe=Y`, `2025`를 적용한 DRY-RUN은 15행·15개 지역코드·단위 `천㎡`로 성공했다.
+다만 현재 KOSIS 응답에는 `12=전남광주통합특별시`가 포함되고 SGIS 2025 경계에는
+기존 `24=광주광역시`, `36=전라남도`가 남아 있어 전국 17개 완전 결합으로 볼 수 없다.
+따라서 이 후보도 코드 대응표 또는 경계 기준연도 확정 전에는 공개 적재하지 않는다.

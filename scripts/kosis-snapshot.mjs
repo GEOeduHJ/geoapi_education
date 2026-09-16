@@ -84,9 +84,9 @@ function buildQuery(options) {
     orgId: required(options, "org-id"),
     tblId: required(options, "tbl-id"),
     objL1: normalizeCodeList(required(options, "obj-l1")),
-    objL2: normalizeCodeList(options["obj-l2"] || "ALL"),
     itmId: normalizeCodeList(required(options, "itm-id")),
     prdSe: required(options, "prd-se").toUpperCase(),
+    ...(options["obj-l2"]?.trim() ? { objL2: normalizeCodeList(options["obj-l2"]) } : {}),
   };
   for (const level of [3, 4, 5, 6, 7, 8]) {
     const value = normalizeCodeList(options[`obj-l${level}`]);
@@ -523,7 +523,7 @@ function printHelp() {
 
 옵션:
   --org-id, --tbl-id, --obj-l1, --itm-id  KOSIS 표·분류·항목 코드(필수)
-  --obj-l2 ... --obj-l8                  추가 분류 코드(생략 시 objL2=ALL)
+  --obj-l2 ... --obj-l8                  추가 분류 코드(단일 분류 표는 생략)
   --prd-se=Y|Q|M|S|D|F|IR                 주기
   --start-prd-de, --end-prd-de            재현 가능한 기간 범위(필수)
   --max-rows=2000                         저장 상한(최대 ${MAX_SNAPSHOT_ROWS})

@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 10년 백필·월별 요약 view 운영 검증 완료, KOSIS 공개 snapshot 읽기 UI 구현
+> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 10년 백필·월별 요약 view 운영 검증 완료, KOSIS 공개 snapshot 읽기 UI·단일 분류 요청 호환성 구현
 >
 > 기준일: 2026-09-17
 
@@ -55,7 +55,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 | 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, `0001`~`0003` migration 실행 | `data_sources`·기후자료 read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003` 적용 | 10개 도시·36,530행 백필 및 `0004` 월별 요약 조회 완료 |
-| 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회·controlled snapshot CLI·공개 snapshot 읽기 UI 구현**; 첫 수업용 표의 실제 적재 대기 |
+| 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회·controlled snapshot CLI·공개 snapshot 읽기 UI·단일 분류 요청 구현**; SGIS 직접 결합이 가능한 첫 표와 실제 적재 대기 |
 | 5 | 2D 지도 제작기 | 1~4번의 snapshot + SGIS/VWorld 경계 | **KMA 관측소 위치 레이어·KOSIS 공개값 준비 패널·SGIS 경계 확인 패널·정확한 코드 조인 진단·조건부 단계구분도·값 결합 없는 기준 면 레이어 완료**; 검증된 단일 기간·단위 snapshot으로 실제 색상·범례를 검증한 뒤 범례 편집·출처·분류 설정 확장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
 | 7 | 3D 지형·입체 통계 | 5번의 공통 data contract | 3D 장면과 2D/표 fallback, 고도·배율·출처 표시 |
@@ -108,7 +108,8 @@ Supabase source_snapshots / climate_stations / climate_daily_observations
 이번 단계에서 추가한 `0005_kosis_observation_access.sql`은 첫 KOSIS snapshot을 적재하기 전에 Supabase
 SQL Editor에서 한 번 실행한다. 이 migration을 실행하기 전에는 `--write` 적재를 진행하지 않는다.
 
-다음 데이터 작업 명령은 작은 샘플부터 실행한다.
+다음 데이터 작업 명령은 작은 샘플부터 실행한다. KOSIS workflow는 이제 `write=false`가
+기본이므로, 표·지역코드·단위 확인 전에는 DRY-RUN만 수행한다.
 
 ```bash
 # Supabase SQL Editor에서 0003_kma_climate.sql과 0004_climate_period_summaries.sql 실행 후 (운영 프로젝트에는 적용 완료)
@@ -124,4 +125,4 @@ node scripts/kma-climate.mjs \
   --write
 ```
 
-적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시하고, KOSIS를 선택하면 SGIS 기준경계 면 레이어도 표시한다. 다음 단계는 `0005_kosis_observation_access.sql` 적용 여부를 확인하고, KOSIS 검색 결과에서 첫 수업용 통계표를 확정한 뒤 controlled snapshot CLI로 메타데이터·원자료·지역코드를 Supabase에 적재하고 KOSIS 지역코드와 SGIS `adm_cd` 대응표를 검증하는 것이다. 대응표가 검증된 뒤에만 2D 주제 레이어·단계구분도를 연결한다. adapter·적재·브라우저 읽기 경로는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필과 `0004_climate_period_summaries.sql` 적용은 완료되었으며, 월 경계 장기 범위는 요약 view를 읽고 월 중간 범위는 정확성을 위해 일자료를 읽는다. `/create/2d`에서는 같은 관측소 집합을 VWorld 배경 위에 표시하고, KOSIS를 선택하면 SGIS 기준경계 면 레이어도 표시한다. KOSIS의 첫 후보 검증 결과 `DT_1YL20651E`는 SGIS와 다른 지역코드 체계로 제외했고, `DT_1YL21281`은 15개 시도 DRY-RUN까지 성공했지만 현재 2025 SGIS 경계와 17개 전국 완전 결합이 되지 않아 공개 적재하지 않았다. 다음 단계는 수업용 지표와 지역코드 대응 기준을 확정하고, 그 기준을 통과한 단일 기간·단위 snapshot만 controlled ingest로 적재한 뒤 2D 단계구분도·범례·출처를 실제값으로 검증하는 것이다. adapter·적재·브라우저 읽기 경로는 [KOSIS adapter 계약](KOSIS_ADAPTER.md)에 기록했다.

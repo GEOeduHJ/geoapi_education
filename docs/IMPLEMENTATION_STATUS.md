@@ -30,6 +30,8 @@
 - SGIS 2025 시도 경계를 VWorld 2D의 EPSG:900913 면 레이어로 변환·표시: KOSIS 선택 시 상태 패널과 지도에 동일 응답을 공유하며, 값 결합 없는 기준경계로만 렌더링
 - KOSIS 공개 관측값과 SGIS 경계의 정확한 코드 조인 진단 구현: `region_code === adm_cd`만 허용하고, 중복 지역값·복수 시점·복수 단위를 `ambiguous-values`로 차단
 - 조인 상태가 `ready`인 경우에만 SGIS 면을 5단계 순차 색상으로 표시하고, 지도 범례에 공개값 수·최솟값·최댓값·단위를 표시하도록 연결
+- KOSIS 단일 분류 표 호환성 보강: `objL2=ALL`을 무조건 추가하지 않고 실제 추가 분류가 있을 때만 전달하며, 검색 미리보기는 최상위 분류값부터 사용
+- KOSIS GitHub Actions 적재 안전장치: `write=false` 기본 DRY-RUN, `publish=true` 단독 실행 차단, 단일 분류 표의 `obj_l2` 생략 지원
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -48,7 +50,7 @@ API 키가 실제로 작동하는지 확인하려면 로컬에서 다음을 실�
 node scripts/smoke-api.mjs
 ```
 
-현재 VWorld 브라우저 domain은 로컬 hostname을 자동 감지한다. 운영 hostname은 `geoapieducation.vercel.app`으로 확인되었으므로 VWorld 허용목록과 Vercel Production `VITE_VWORLD_DOMAIN`에 동일하게 등록한 뒤 실제 지도 로더를 검증한다. KOSIS는 검색 결과에서 첫 수업용 통계표를 최종 확정해야 한다.
+현재 VWorld 브라우저 domain은 로컬 hostname을 자동 감지한다. 운영 hostname은 `geoapieducation.vercel.app`으로 확인되었으므로 VWorld 허용목록과 Vercel Production `VITE_VWORLD_DOMAIN`에 동일하게 등록한 뒤 실제 지도 로더를 검증한다. KOSIS는 `DT_1YL21281`의 15개 시도 DRY-RUN까지 확인했지만 `12` 통합지역과 SGIS 2025의 `24/36` 코드가 달라 전국 완전 결합은 보류 중이다. 첫 수업용 통계표와 코드 대응 기준을 최종 확정해야 한다.
 
 2026-09-16 현재 실제 스모크 결과는 SGIS 인증 `HTTP 200 / Success`, 기상청 ASOS `HTTP 200`, 공공데이터포털 단기예보 `HTTP 200 / NORMAL_SERVICE`, VWorld 2D 로더 `HTTP 200`이다. Supabase `data_sources`·게시 자료 조회는 `HTTP 200`, `learner_attempts` 공개 조회는 `HTTP 401`로 확인했다. KOSIS는 `101 / DT_1YL12001E` 후보의 검색·메타데이터·8개 소규모 값 조회까지 운영 검증했다.
 
@@ -73,7 +75,7 @@ node scripts/smoke-api.mjs
 
 KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [0003_kma_climate.sql](../supabase/migrations/0003_kma_climate.sql)에 있다. 3일 샘플 검증 후 2016~2025년 10개 관측소·36,530행의 원격 백필까지 완료했다. 장기 범위용 요약 view [0004_climate_period_summaries.sql](../supabase/migrations/0004_climate_period_summaries.sql)도 운영 프로젝트에 적용되어 월 경계 범위에서 활성화되었다.
 
-- KOSIS에서 첫 번째 통계표 2~3개를 선정하고 메타데이터·단위·시점·지역코드 확정. 검색·메타·값 adapter와 요청 제한, 선택 후 미리보기는 구현했으며 `101 / DT_1YL12001E` 후보의 소규모 값까지 운영 검증함. 최종 수업용 표 snapshot 적재는 표 선정 후 진행
+- KOSIS에서 첫 번째 통계표 2~3개를 선정하고 메타데이터·단위·시점·지역코드 확정. 검색·메타·값 adapter, 단일 분류 요청, 요청 제한, 선택 후 미리보기는 구현했으며 `101 / DT_1YL21281`의 SGIS 일치 15개 시도·2025·T10 DRY-RUN까지 운영 검증함. `DT_1YL20651E`는 KOSIS 지역코드 체계가 SGIS와 달라 제외했고, 최종 수업용 표 snapshot 적재는 코드 대응 기준 확정 후 진행
 - 기상청 ASOS의 관측소·변수·최근 10년 기간을 확정하고 31일 단위 배치 수집기 작성 **(구현 완료, 샘플 파싱 확인)**
 - SGIS 데이터 API의 경계·통계 응답을 공통 `GeoObservation` 모델로 정규화
 - Supabase `0001`~`0004` migration과 공개 RLS를 운영 프로젝트에 적용함. 원자료는 공개 SELECT, 월별 요약 view는 `security_invoker`로 공개 SELECT
@@ -102,12 +104,12 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 - Supabase 프로젝트 URL·키와 기존 공개 읽기·학습기록 직접 접근 차단을 확인함. `climate_stations`·`climate_daily_observations`에 10개 관측소·36,530행 백필을 완료했으며, 공개 REST 행 수 `0-0/36530`을 확인함. `climate_period_summaries` 공개 REST 조회는 `HTTP 206`, 1,200행(10개 관측소 × 120개월)으로 확인함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
-- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. controlled snapshot CLI·`0005` migration·공개 snapshot 읽기 패널·SGIS 경계 상태 패널을 추가했으며, 첫 수업용 표와 실제 Supabase snapshot은 교육 주제 확정 대기
+- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, 단일 분류 표에서 `objL2`를 생략하는 요청을 지원함. `101 / DT_1YL21281` 후보의 15개 지역·2025·T10 DRY-RUN까지 운영 검증했으나, 현재 KOSIS의 `12` 통합지역과 SGIS 2025의 `24/36`이 달라 완전 전국 지도는 보류함. controlled snapshot CLI·안전한 GitHub Actions workflow·`0005` migration·공개 snapshot 읽기 패널·SGIS 경계 상태 패널을 추가했으며, 첫 수업용 표와 실제 Supabase snapshot은 코드 대응 기준 확정 대기
 
 ## 검증 기록
 
 - `npm run typecheck`: 통과
-- `npm test`: 12개 테스트 파일·34개 테스트 통과
+- `npm test`: 13개 테스트 파일·43개 테스트 통과
 - `npm run build`: Vite production build 통과
 - `node scripts/smoke-api.mjs`: KOSIS 통합검색을 포함한 provider 스모크, Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함. KOSIS 통계값은 별도 운영 요청으로 후보 표의 8개 소규모 레코드를 확인함
 - 기후자료 적재 검증: Supabase 공개 읽기 `HTTP 200`, 관측소 3개·일자료 9행 확인
