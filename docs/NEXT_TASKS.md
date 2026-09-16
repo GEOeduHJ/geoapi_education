@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인 확인 완료, 저장소 초기 연결 전
+> 현재 단계: API 승인·Vercel 배포 완료, 공개형 Supabase RLS와 저장소 초기 연결 전
 >
 > 기준일: 2026-09-16
 
@@ -13,7 +13,8 @@
 - Supabase Project URL
 - 브라우저용 Publishable Key를 현재 코드의 `VITE_SUPABASE_ANON_KEY`에 설정
 - 서버용 Secret Key를 현재 코드의 `SUPABASE_SERVICE_ROLE_KEY`에 설정
-- `0001_initial_schema.sql` 실행 여부
+- `0001_initial_schema.sql` 및 `0002_rls_public_read.sql` 실행 여부
+- 로그인 없이 공개 읽기만 허용하는 RLS 검증 결과
 
 Secret Key·계정 비밀번호·데이터베이스 비밀번호는 채팅이나 GitHub에 올리지 않는다. 로컬 `.env.local`과 Vercel Environment Variables에 직접 저장한다.
 
@@ -26,7 +27,7 @@ Secret Key·계정 비밀번호·데이터베이스 비밀번호는 채팅이나
 
 Vercel 배포 후 다음 두 값을 확정한다.
 
-1. 실제 운영 hostname
+1. 실제 운영 hostname: `geoapieducation.vercel.app`
 2. VWorld 관리 화면에 등록한 hostname
 
 두 값이 일치하도록 Vercel 환경변수 `VITE_VWORLD_DOMAIN`을 설정한다. 로컬에서는 코드가 현재 브라우저 hostname을 자동 사용한다.
@@ -46,7 +47,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 
 | 순서 | 작업 | 선행조건 | 완료 기준 |
 | --- | --- | --- | --- |
-| 1 | Supabase 연결·PostGIS·RLS 확인 | 프로젝트 생성, migration 실행 | `sources`와 published material read가 실제 REST에서 동작 |
+| 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, 두 migration 실행 | `data_sources`와 published material read가 실제 REST에서 동작하고 브라우저 쓰기는 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 2번의 작은 샘플 성공 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 요약 생성 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | 원자료·metadata·지역코드·단위가 DB snapshot에 보존 |
@@ -96,4 +97,3 @@ Supabase source_snapshots / geo_observations
 ```
 
 이 단위를 끝낸 뒤에 KOSIS 주제도와 3D 지형 자료를 병렬로 확장한다. 원천 API를 학생 화면에서 직접 반복 호출하지 않고, 작은 범위의 수집·검증·스냅샷 생성이 통과한 뒤 범위를 늘린다.
-

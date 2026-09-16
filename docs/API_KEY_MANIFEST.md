@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- |
 | KOSIS 공유서비스 | `KOSIS_API_KEY` | 등록 | 서버 전용 | 통계표 ID 확정 후 데이터 스모크 테스트 |
 | SGIS | `SGIS_CONSUMER_KEY` / `SGIS_CONSUMER_SECRET` | 등록 | 서버 전용 | 인증 토큰은 브라우저로 전달하지 않음 |
-| VWorld | `VITE_VWORLD_API_KEY` | 개발키 등록·운영 domain 대기 | 등록 도메인 브라우저 | 로컬은 현재 브라우저 hostname을 자동 사용하고, Vercel 연결 후 `VITE_VWORLD_DOMAIN`에 등록된 운영 hostname을 넣는다 |
+| VWorld | `VITE_VWORLD_API_KEY` | 운영 hostname 확인: `geoapieducation.vercel.app`; 허용목록 등록 대기 | 등록 도메인 브라우저 | 로컬은 현재 브라우저 hostname을 자동 사용하고, Production `VITE_VWORLD_DOMAIN`에는 운영 hostname을 넣는다 |
 | 기상청 API 허브 | `KMA_AUTH_KEY` | 신청·승인·HTTP 200 확인 | 서버 전용 | ASOS 관측·기후 스냅샷 적재 |
 | 공공데이터포털 | `DATA_GO_KR_SERVICE_KEY` | 신청·승인 완료·단기예보 정상 응답 확인 | 서버 전용 | 하나의 ServiceKey를 승인된 공공데이터포털 API에 공통 사용하고, URL 생성 전에 한 번만 정규화 |
 | 에어코리아 | `DATA_GO_KR_SERVICE_KEY` | 신청·승인 완료·endpoint 재검증 대기 | 서버 전용 | 공공데이터포털 공통 ServiceKey 사용 |
@@ -46,10 +46,10 @@ VWorld 브라우저 로더의 `domain`은 API key와 별도로 현재 웹 페이
 ```text
 로컬: http://localhost:5175       → domain=localhost
 로컬: http://127.0.0.1:5175       → domain=127.0.0.1
-운영: https://<vercel-hostname>   → VWorld에 등록한 hostname과 일치해야 함
+운영: https://geoapieducation.vercel.app → domain=geoapieducation.vercel.app
 ```
 
-Vercel 연결 후에는 VWorld 관리 화면에 실제 운영 hostname을 등록하고, Vercel 환경변수 `VITE_VWORLD_DOMAIN`에도 같은 hostname을 넣는다. `https://`, 경로, 포트 포함 여부는 VWorld 관리 화면의 입력 규칙을 따른다. [VWorld 2D 지도 API 안내](https://www.vworld.kr/dev/v4dv_opn2dmap2guide_s001.do)
+현재 운영 주소는 `geoapieducation.vercel.app`이다. VWorld 관리 화면에 이 hostname을 등록하고, Vercel Production 환경변수 `VITE_VWORLD_DOMAIN`에도 같은 hostname을 넣는다. `https://`, 경로, 포트 포함 여부는 VWorld 관리 화면의 입력 규칙을 따른다. [VWorld 2D 지도 API 안내](https://www.vworld.kr/dev/v4dv_opn2dmap2guide_s001.do)
 
 ## 2026-09-16 스모크 결과
 
