@@ -339,6 +339,19 @@ function field(row: Record<string, unknown>, name: string): string | null {
   return String(row[key]);
 }
 
+export interface KosisProviderError {
+  code: string | null;
+  message: string | null;
+}
+
+export function extractKosisProviderError(payload: unknown): KosisProviderError | null {
+  if (!isRecord(payload)) return null;
+  const code = field(payload, "err") ?? field(payload, "errCd") ?? field(payload, "code");
+  const message = field(payload, "errMsg") ?? field(payload, "message");
+  if (!code && !message) return null;
+  return { code, message: message?.slice(0, 300) ?? null };
+}
+
 function hasField(row: Record<string, unknown>, name: string): boolean {
   return Object.keys(row).some((candidate) => candidate.toUpperCase() === name.toUpperCase());
 }

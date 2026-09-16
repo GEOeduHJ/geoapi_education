@@ -3,6 +3,7 @@ import {
   buildKosisMetadataUrl,
   buildKosisSearchUrl,
   buildKosisTableUrl,
+  extractKosisProviderError,
   parseKosisMetadataResponse,
   parseKosisResponseText,
   parseKosisSearchResponse,
@@ -57,6 +58,7 @@ describe("KOSIS adapter", () => {
     expect(payload).toEqual([{ ORG_ID: "101", TBL_ID: "DT_TEST", DT: "1,000" }]);
     expect(parseKosisResponseText('{ORG_ID:"101",TBL_ID:"DT_TEST"}')).toEqual({ ORG_ID: "101", TBL_ID: "DT_TEST" });
     expect(parseKosisResponseText('[{ITEM03:"비율 = "Pt" / "P0""}]')).toEqual([{ ITEM03: '비율 = "Pt" / "P0"' }]);
+    expect(extractKosisProviderError({ err: "20", errMsg: "필수요청변수값이 누락되었습니다." })).toEqual({ code: "20", message: "필수요청변수값이 누락되었습니다." });
     expect(parseKosisResponseText("not-json")).toBeNull();
   });
 

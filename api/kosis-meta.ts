@@ -2,6 +2,7 @@ import type { ApiRequest, ApiResponse } from "../server/http.js";
 import { methodNotAllowed, queryParam, upstreamUnavailable } from "../server/http.js";
 import {
   buildKosisMetadataUrl,
+  extractKosisProviderError,
   parseKosisResponseText,
   parseKosisMetadataResponse,
   type KosisMetadataQuery,
@@ -27,6 +28,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const upstream = await fetch(buildKosisMetadataUrl(apiKey, query), { headers: { Accept: "application/json" } });
     if (!upstream.ok) return upstreamUnavailable(response, "kosis", upstream.status);
     const payload = parseKosisResponseText(await upstream.text());
+    const providerError = extractKosisProviderError(payload);
+    if (providerError) return response.status(400).json({ ok: false, provider: "kosis", error: "KOSIS_UPSTREAM_REQUEST_REJECTED", upstreamCode: providerError.code, message: providerError.message });
     const records = parseKosisMetadataResponse(payload);
     if (records.length === 0 && !Array.isArray(payload)) {
       return response.status(502).json({ ok: false, provider: "kosis", error: "KOSIS_UNEXPECTED_RESPONSE" });

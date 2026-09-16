@@ -3,9 +3,11 @@ import type { KosisMetadataRecord, KosisPeriod, KosisRecord, KosisSearchResult, 
 interface KosisApiResponse<T> {
   data?: T[];
   error?: unknown;
+  message?: unknown;
 }
 
-function responseError(error: unknown, status: number): string {
+function responseError(error: unknown, status: number, message: unknown): string {
+  if (typeof message === "string" && message.trim()) return message;
   if (typeof error === "string" && error.trim()) return error;
   if (error && typeof error === "object" && "message" in error) {
     const message = (error as { message?: unknown }).message;
@@ -18,7 +20,7 @@ async function requestKosis<T>(path: string, params: URLSearchParams, label: str
   try {
     const response = await fetch(`${path}?${params.toString()}`, { headers: { Accept: "application/json" } });
     const payload = (await response.json()) as KosisApiResponse<T>;
-    if (!response.ok) return { data: [], error: responseError(payload.error, response.status).replace("KOSIS 검색", label) };
+    if (!response.ok) return { data: [], error: responseError(payload.error, response.status, payload.message).replace("KOSIS 검색", label) };
     return { data: Array.isArray(payload.data) ? payload.data : [], error: null };
   } catch {
     return { data: [], error: `${label} 서버에 연결하지 못했습니다.` };
@@ -63,7 +65,7 @@ export async function fetchKosisTable(query: KosisTablePreviewQuery): Promise<{ 
   try {
     const response = await fetch(`/api/kosis-table?${params.toString()}`, { headers: { Accept: "application/json" } });
     const payload = (await response.json()) as KosisTableApiResponse;
-    if (!response.ok) return { data: [], metadata: null, error: responseError(payload.error, response.status).replace("KOSIS 검색", "KOSIS 통계값") };
+    if (!response.ok) return { data: [], metadata: null, error: responseError(payload.error, response.status, payload.message).replace("KOSIS 검색", "KOSIS 통계값") };
     return { data: Array.isArray(payload.data) ? payload.data : [], metadata: payload.metadata ?? null, error: null };
   } catch {
     return { data: [], metadata: null, error: "KOSIS 통계값 서버에 연결하지 못했습니다." };
