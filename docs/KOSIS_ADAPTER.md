@@ -148,4 +148,22 @@ GitHub repository secrets에 `KOSIS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_
 등록하고, workflow 입력에는 표 코드·분류·항목·기간만 넣는다. service key는 workflow 로그나
 브라우저에 출력하지 않는다.
 
+## 공개 브라우저 읽기 계약
+
+`src/lib/geo-observations.ts`는 `is_public=true`이고 `schema_version=kosis-statistics-v1`인
+가장 최근 snapshot 하나만 찾는다. 이어서 해당 `snapshot_id`의 `geo_observations`를 최대
+2,000행까지 읽는다. 브라우저 조회 컬럼에는 `raw_payload`가 포함되지 않으며, Supabase
+Publishable Key의 공개 SELECT RLS만 사용한다.
+
+`KosisPublicSnapshotPanel`은 `/create/2d`에서 다음 상태를 구분해 보여준다.
+
+- 공개 snapshot 없음: 수집기 실행 전의 정상 상태
+- 공개 snapshot 읽기 오류: 환경변수·migration·RLS 문제 가능성
+- 공개 snapshot 준비: 저장 행 수·기간·수집 시각·checksum 일부·관측값 일부 표시
+- geometry 연결 대기: KOSIS 지역코드를 SGIS/VWorld 행정구역 경계와 조인해야 2D 단계구분도를 만들 수 있음을 안내
+
+이 화면은 자료를 저장하거나 공개로 바꾸지 않는다. 실제 공개 여부는 `--write --public`을
+명시한 controlled ingest에서만 결정한다. 따라서 로그인 없는 학습자 화면과 관리자 수집
+작업의 권한 경계가 유지된다.
+
 2026-09-16 운영 검증에서는 `101 / DT_1YL12001E` 표에 `objL1=21010+21020`, `objL2=ALL`, `itmId=T001`을 적용해 8개 정규화 레코드를 확인했다. 2026-09-17에는 같은 요청을 새 snapshot 수집기 dry-run으로 재검증했다. 이 표의 원천 응답 주기는 요청값과 별개로 `M`으로 반환되었으므로, 저장 전에는 응답의 `PRD_SE`와 단위를 다시 확인한다.

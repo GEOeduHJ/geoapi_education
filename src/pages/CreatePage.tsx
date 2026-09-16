@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
+import { KosisPublicSnapshotPanel } from "../components/KosisPublicSnapshotPanel";
 import { KosisTableSearch } from "../components/KosisTableSearch";
 import { VWorld2DMap } from "../components/VWorld2DMap";
 
@@ -129,6 +130,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
               <option value="opentopodata">OpenTopoData 고도</option>
             </select>
             {source === "kosis" && <KosisTableSearch />}
+            {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>
