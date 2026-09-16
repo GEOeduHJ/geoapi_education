@@ -33,7 +33,7 @@ npm run build
 node scripts/smoke-api.mjs
 ```
 
-스모크 테스트는 키나 응답 본문을 출력하지 않는다. SGIS·기상청 ASOS·공공데이터포털 단기예보·VWorld 로더·Supabase 공개 읽기·학습기록 직접 접근 차단을 확인하며, KOSIS는 사용할 통계표를 정한 뒤 별도로 점검한다. 현재 MVP는 로그인 없이 공개 자료를 이용하는 방식이다.
+스모크 테스트는 키나 응답 본문을 출력하지 않는다. SGIS·기상청 ASOS·공공데이터포털 단기예보·VWorld 로더·KOSIS 검색·Supabase 공개 읽기·학습기록 직접 접근 차단을 확인한다. KOSIS 통계값 요청은 표의 `orgId`, `tblId`, 분류·항목 코드를 확정한 뒤 별도로 실행한다. 현재 MVP는 로그인 없이 공개 자료를 이용하는 방식이다.
 
 ## 문서
 
@@ -43,5 +43,7 @@ node scripts/smoke-api.mjs
 - [백엔드·저장소 선택 결정서](docs/BACKEND_STORAGE_DECISION.md)
 - [Supabase 역할과 공개 이용 정책](docs/SUPABASE_ROLE.md)
 - [다음 작업 준비](docs/NEXT_TASKS.md)
+- [KOSIS adapter 계약](docs/KOSIS_ADAPTER.md)
+- [KOSIS adapter 계약](docs/KOSIS_ADAPTER.md)
 
 로컬 VWorld 지도는 현재 브라우저의 `localhost` 또는 `127.0.0.1` hostname을 자동으로 domain 파라미터에 사용한다. Vercel 배포 후에는 VWorld에 등록한 운영 hostname을 `VITE_VWORLD_DOMAIN`에 설정한다.

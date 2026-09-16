@@ -23,6 +23,7 @@
 - KMA 장기 조회용 월별 요약 view 구현·적용: `climate_period_summaries`, 유효 관측일수 기반 가중 평균 계약
 - `/create/chart`에 Supabase 기반 KMA 기후 비교 화면 구현: 지표·기간 선택, 관측소별 평균, 유효 관측일수, 빈 자료·오류 상태
 - `/create/2d`에 VWorld 2D 로더와 KMA ASOS 관측소 레이어 구현: 지도 클릭 시 지점번호·좌표·고도 확인, 지도 실패 시 안내 fallback
+- KOSIS 서버 adapter 구현: 통계표 검색·분류/항목 메타데이터·제한된 통계값 조회, KOSIS 키 서버 전용 유지, 통계부호·결측 원문 보존
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -57,12 +58,15 @@ node scripts/smoke-api.mjs
 | `GET /api/sgis-years` | SGIS 토큰 발급 후 기준년도 조회 | 구현·실제 토큰 비노출 |
 | `GET /api/short-forecast?baseDate=YYYYMMDD&baseTime=HHMM&nx=60&ny=127` | 단기예보를 서버에서 호출하고 항목만 정규화 | 구현·승인 확인 |
 | `GET /api/kma-asos?tm=YYYYMMDDHHMM&stn=108` | ASOS 단일 시각 조회의 서버 프록시 | 구현·HTTP 200 확인 |
+| `GET /api/kosis-search?searchNm=인구` | KOSIS 통계표 후보 검색 | 구현·키 서버 전용 |
+| `GET /api/kosis-meta?orgId=101&tblId=...` | 선택 표의 분류·항목·단위 코드 조회 | 구현·표 ID 입력 대기 |
+| `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·표 ID/코드 입력 대기 |
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 
 KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [0003_kma_climate.sql](../supabase/migrations/0003_kma_climate.sql)에 있다. 3일 샘플 검증 후 2016~2025년 10개 관측소·36,530행의 원격 백필까지 완료했다. 장기 범위용 요약 view [0004_climate_period_summaries.sql](../supabase/migrations/0004_climate_period_summaries.sql)도 운영 프로젝트에 적용되어 월 경계 범위에서 활성화되었다.
 
-- KOSIS에서 첫 번째 통계표 2~3개를 선정하고 메타데이터·단위·시점·지역코드 확정
+- KOSIS에서 첫 번째 통계표 2~3개를 선정하고 메타데이터·단위·시점·지역코드 확정. 검색·메타·값 adapter와 요청 제한은 구현했으며 실제 표 값 호출은 표 ID 확정 후 진행
 - 기상청 ASOS의 관측소·변수·최근 10년 기간을 확정하고 31일 단위 배치 수집기 작성 **(구현 완료, 샘플 파싱 확인)**
 - SGIS 데이터 API의 경계·통계 응답을 공통 `GeoObservation` 모델로 정규화
 - Supabase `0001`~`0004` migration과 공개 RLS를 운영 프로젝트에 적용함. 원자료는 공개 SELECT, 월별 요약 view는 `security_invoker`로 공개 SELECT
@@ -91,14 +95,14 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 - Supabase 프로젝트 URL·키와 기존 공개 읽기·학습기록 직접 접근 차단을 확인함. `climate_stations`·`climate_daily_observations`에 10개 관측소·36,530행 백필을 완료했으며, 공개 REST 행 수 `0-0/36530`을 확인함. `climate_period_summaries` 공개 REST 조회는 `HTTP 206`, 1,200행(10개 관측소 × 120개월)으로 확인함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
-- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음
+- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, 실제 `orgId/tblId/objL1/itmId`는 아직 확정하지 않음
 
 ## 검증 기록
 
 - `npm run typecheck`: 통과
 - `npm test`: 6개 테스트 파일·13개 테스트 통과
 - `npm run build`: Vite production build 통과
-- `node scripts/smoke-api.mjs`: 7개 통과, KOSIS 통계표 요청 1개 보류, 실패 0개. Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함
+- `node scripts/smoke-api.mjs`: KOSIS 통합검색을 포함한 provider 스모크, KOSIS 통계표 값 요청은 표 ID 확정 전 보류. Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함
 - 기후자료 적재 검증: Supabase 공개 읽기 `HTTP 200`, 관측소 3개·일자료 9행 확인
 - KMA 장기 백필 검증: 118개 구간·36,530행 저장 완료, 공개 일자료 조회 `HTTP 206`, 월별 view 조회 `HTTP 206`·1,200행 확인
 - 브라우저 확인: 홈, 자료 제작 허브, 2D 제작, 3D 제작, 탐구 허브, 3D 탐구 활동, API 상태 라우트 확인

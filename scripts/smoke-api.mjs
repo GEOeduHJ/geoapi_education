@@ -154,7 +154,16 @@ if (env("VITE_VWORLD_API_KEY") && env("VITE_VWORLD_DOMAIN") && env("VITE_VWORLD_
 }
 
 if (env("KOSIS_API_KEY")) {
-  console.log("DEFER  KOSIS  통계표(orgId/tblId) 확정 후 실제 데이터 요청");
+  const url = new URL("https://kosis.kr/openapi/statisticsSearch.do");
+  url.searchParams.set("method", "getList");
+  url.searchParams.set("apiKey", env("KOSIS_API_KEY"));
+  url.searchParams.set("format", "json");
+  url.searchParams.set("searchNm", "인구");
+  url.searchParams.set("sort", "RANK");
+  url.searchParams.set("startCount", "1");
+  url.searchParams.set("resultCount", "5");
+  results.push(await request("KOSIS table search", url, { headers: { Accept: "application/json" } }, ({ parsed, body }) => Array.isArray(parsed) ? `${parsed.length}개 통계표` : body.trim().startsWith("[") ? "JSON 유사 배열 응답 확인" : parsed && typeof parsed === "object" ? `객체 응답 · ${Object.keys(parsed).slice(0, 8).join(",")}` : `응답 형식 확인 · ${summarizeFailure(body)}`));
+  console.log("DEFER  KOSIS  검색 결과에서 첫 orgId/tblId·분류·항목 코드 확정 후 통계값 요청");
 } else {
   console.log("SKIP  KOSIS  키 미설정");
 }

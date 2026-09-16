@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
+import { KosisTableSearch } from "../components/KosisTableSearch";
 import { VWorld2DMap } from "../components/VWorld2DMap";
 
 const recipes = [
@@ -79,6 +81,7 @@ function WorkspaceNotice({ dimension, description }: { dimension: "2D" | "3D"; d
 
 export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
   const isThreeD = dimension === "3D";
+  const [source, setSource] = useState("kma-hub");
 
   return (
     <div className="page-stack">
@@ -118,13 +121,14 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
             <p className="eyebrow">01 · DATA SOURCE</p>
             <h3>자료 소스 선택</h3>
             <label className="field-label" htmlFor="source-select">기본 데이터</label>
-            <select id="source-select" defaultValue="kma-hub">
+            <select id="source-select" value={source} onChange={(event) => setSource(event.target.value)}>
               <option value="kosis">KOSIS 통계</option>
               <option value="sgis-data">SGIS 공간통계</option>
               <option value="kma-hub">기상청 ASOS</option>
               <option value="world-bank">World Bank</option>
               <option value="opentopodata">OpenTopoData 고도</option>
             </select>
+            {source === "kosis" && <KosisTableSearch />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>

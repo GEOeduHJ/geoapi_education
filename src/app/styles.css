@@ -168,6 +168,27 @@ textarea { padding: 12px; resize: vertical; font-size: 12px; line-height: 1.7; }
 .toggle i { width: 13px; height: 13px; display: block; border-radius: 50%; background: white; transition: transform .2s; }
 .toggle.is-on { background: var(--teal); }
 .toggle.is-on i { transform: translateX(13px); }
+.kosis-table-search { margin-top: 20px; padding-top: 17px; border-top: 1px solid #e6ecec; }
+.kosis-table-search h4 { margin: 0 0 7px; color: var(--navy); font-size: 13px; }
+.kosis-table-search__description { margin-bottom: 12px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.kosis-search-form { display: flex; flex-direction: column; gap: 6px; }
+.kosis-search-form > label { color: var(--muted); font-size: 10px; font-weight: 700; }
+.kosis-search-form > div { display: flex; gap: 6px; }
+.kosis-search-form input { min-width: 0; width: 100%; height: 36px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; outline: 0; background: white; color: var(--ink); font-size: 11px; }
+.kosis-search-form input:focus { border-color: #65b8a5; box-shadow: 0 0 0 3px rgba(15,139,141,.1); }
+.kosis-search-form .button { min-height: 36px; padding: 0 11px; font-size: 10px; }
+.kosis-search-form .button:disabled { cursor: wait; opacity: .6; }
+.kosis-search-message { margin: 10px 0 0; padding: 9px 10px; border-radius: 6px; background: #edf5f3; color: #55716f; font-size: 10px; line-height: 1.5; }
+.kosis-search-message--error { background: #fbefdf; color: #896437; }
+.kosis-search-results { max-height: 260px; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.kosis-result { padding: 10px; display: grid; gap: 3px; border: 1px solid #e2e9e7; border-radius: 7px; background: white; color: var(--ink); text-align: left; cursor: pointer; }
+.kosis-result:hover, .kosis-result.is-selected { border-color: #80c5b1; background: #f0faf6; }
+.kosis-result strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.kosis-result span, .kosis-result small { color: var(--muted); font-size: 9px; }
+.kosis-result code, .kosis-selected-table code { color: #53717a; font-family: "DM Mono", monospace; font-size: 9px; }
+.kosis-selected-table { margin-top: 10px; padding: 10px; display: grid; gap: 3px; border: 1px solid #a8d8c8; border-radius: 7px; background: #eaf7f1; color: var(--navy); font-size: 10px; }
+.kosis-selected-table span { font-weight: 700; }
+.kosis-selected-table small { color: #5d7c77; font-size: 9px; line-height: 1.5; }
 .muted-copy { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .chart-placeholder { min-height: 370px; padding: 45px; display: flex; align-items: center; gap: 70px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); }
 .placeholder-chart { width: 45%; height: 190px; padding: 20px; display: flex; align-items: end; justify-content: space-around; gap: 20px; border-bottom: 1px solid #a8b9ba; border-left: 1px solid #a8b9ba; background: repeating-linear-gradient(to top, transparent 0, transparent 37px, #e7eded 38px); }
