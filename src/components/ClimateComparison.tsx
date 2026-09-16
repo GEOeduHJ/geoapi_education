@@ -66,6 +66,9 @@ export function ClimateComparison() {
   const maxValue = Math.max(...summaries.map((summary) => summary.value), 0);
   const minValue = Math.min(...summaries.map((summary) => summary.value), 0);
   const span = maxValue - minValue || 1;
+  const actualFrom = observations[0]?.observation_date;
+  const actualTo = observations[observations.length - 1]?.observation_date;
+  const isPartialRange = Boolean(actualFrom && actualTo && (actualFrom !== from || actualTo !== to));
 
   return (
     <section className="climate-workspace" aria-labelledby="climate-comparison-title">
@@ -117,7 +120,8 @@ export function ClimateComparison() {
           <div className="climate-footnote">
             <span>관측값이 존재하는 날만 평균에 포함합니다.</span>
             <span>현재 값은 선택 기간의 일자료 평균이며, 공식 기후평년값과는 구분합니다.</span>
-            <span>실제 범위: {observations[0]?.observation_date} ~ {observations[observations.length - 1]?.observation_date}</span>
+            <span>실제 적재 범위: {actualFrom} ~ {actualTo}</span>
+            {isPartialRange && <strong>현재 DB에 적재된 구간만 계산했습니다.</strong>}
           </div>
         </>
       )}
