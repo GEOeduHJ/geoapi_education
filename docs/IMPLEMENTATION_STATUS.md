@@ -42,9 +42,9 @@ API 키가 실제로 작동하는지 확인하려면 로컬에서 다음을 실�
 node scripts/smoke-api.mjs
 ```
 
-현재 VWorld 브라우저 domain은 로컬 hostname을 자동 감지한다. 운영 hostname은 `geoapieducation.vercel.app`으로 확인되었으므로 VWorld 허용목록과 Vercel Production `VITE_VWORLD_DOMAIN`에 동일하게 등록한 뒤 실제 지도 로더를 검증한다. KOSIS는 사용할 통계표의 `orgId`와 `tblId`를 먼저 확정해야 한다.
+현재 VWorld 브라우저 domain은 로컬 hostname을 자동 감지한다. 운영 hostname은 `geoapieducation.vercel.app`으로 확인되었으므로 VWorld 허용목록과 Vercel Production `VITE_VWORLD_DOMAIN`에 동일하게 등록한 뒤 실제 지도 로더를 검증한다. KOSIS는 검색 결과에서 첫 수업용 통계표를 최종 확정해야 한다.
 
-2026-09-16 현재 실제 스모크 결과는 SGIS 인증 `HTTP 200 / Success`, 기상청 ASOS `HTTP 200`, 공공데이터포털 단기예보 `HTTP 200 / NORMAL_SERVICE`, VWorld 2D 로더 `HTTP 200`이다. Supabase `data_sources`·게시 자료 조회는 `HTTP 200`, `learner_attempts` 공개 조회는 `HTTP 401`로 확인했다. KOSIS는 첫 통계표 확정 전이라 보류한다.
+2026-09-16 현재 실제 스모크 결과는 SGIS 인증 `HTTP 200 / Success`, 기상청 ASOS `HTTP 200`, 공공데이터포털 단기예보 `HTTP 200 / NORMAL_SERVICE`, VWorld 2D 로더 `HTTP 200`이다. Supabase `data_sources`·게시 자료 조회는 `HTTP 200`, `learner_attempts` 공개 조회는 `HTTP 401`로 확인했다. KOSIS는 `101 / DT_1YL12001E` 후보의 검색·메타데이터·8개 소규모 값 조회까지 운영 검증했다.
 
 ## 다음 구현 순서
 
@@ -60,7 +60,7 @@ node scripts/smoke-api.mjs
 | `GET /api/kma-asos?tm=YYYYMMDDHHMM&stn=108` | ASOS 단일 시각 조회의 서버 프록시 | 구현·HTTP 200 확인 |
 | `GET /api/kosis-search?searchNm=인구` | KOSIS 통계표 후보 검색 | 구현·키 서버 전용 |
 | `GET /api/kosis-meta?orgId=101&tblId=...` | 선택 표의 분류·항목·단위 코드 조회 | 구현·표 ID 입력 대기 |
-| `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·표 ID/코드 입력 대기 |
+| `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·소규모 운영 검증 완료 |
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 
@@ -95,7 +95,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 - Supabase 프로젝트 URL·키와 기존 공개 읽기·학습기록 직접 접근 차단을 확인함. `climate_stations`·`climate_daily_observations`에 10개 관측소·36,530행 백필을 완료했으며, 공개 REST 행 수 `0-0/36530`을 확인함. `climate_period_summaries` 공개 REST 조회는 `HTTP 206`, 1,200행(10개 관측소 × 120개월)으로 확인함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
-- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, 실제 `orgId/tblId/objL1/itmId`는 아직 확정하지 않음
+- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. 첫 수업용 표와 Supabase snapshot은 별도 확정 대기
 
 ## 검증 기록
 

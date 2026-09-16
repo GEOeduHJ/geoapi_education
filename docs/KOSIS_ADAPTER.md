@@ -53,8 +53,10 @@ GET /api/kosis-meta?orgId=101&tblId=DT_...
 ### 3. 통계값
 
 ```text
-GET /api/kosis-table?orgId=101&tblId=DT_...&objL1=11,26&itmId=ITM_...&prdSe=Y&startPrdDe=2016&endPrdDe=2025&smblChk=Y
+GET /api/kosis-table?orgId=101&tblId=DT_...&objL1=11+26&objL2=ALL&itmId=ITM_...&prdSe=Y&startPrdDe=2016&endPrdDe=2025&smblChk=Y
 ```
+
+KOSIS URL 생성기는 같은 분류·항목 목록을 `+`로 이어 붙이는 형식을 사용한다. 애플리케이션은 입력에서 쉼표 또는 공백을 허용하지만, 원천 요청을 만들 때는 공백 구분으로 정규화한다. `objL2`가 없는 요청은 `ALL`로 보완해 한 단계 분류만 있는 표도 원천 API의 URL 생성 규칙과 맞춘다. 두 번째 분류 이상을 특정하려면 메타데이터에서 확인한 코드를 `objL2`~`objL8`에 명시한다.
 
 지원하는 KOSIS 주기 코드는 다음과 같다.
 
@@ -99,3 +101,5 @@ KOSIS 검색 결과에서 첫 번째 교육용 표를 하나 고른 뒤 다음 �
 - 총량인지 비율인지, 비율이면 분모의 의미
 
 표 ID가 확정되면 메타데이터 호출 결과를 실제로 검증하고, 작은 지역·짧은 기간을 먼저 Supabase에 적재한 뒤 2D 단계구분도·범례·출처 패널로 연결한다.
+
+2026-09-16 운영 검증에서는 `101 / DT_1YL12001E` 표에 `objL1=21010+21020`, `objL2=ALL`, `itmId=T001`을 적용해 8개 정규화 레코드를 확인했다. 이 표의 원천 응답 주기는 요청값과 별개로 `M`으로 반환되었으므로, 저장 전에는 응답의 `PRD_SE`와 단위를 다시 확인한다.
