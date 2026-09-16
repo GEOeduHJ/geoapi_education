@@ -238,6 +238,21 @@ textarea { padding: 12px; resize: vertical; font-size: 12px; line-height: 1.7; }
 .kosis-public-panel__notice { display: block; margin-top: 7px; color: #7c908d; font-size: 8px; line-height: 1.4; }
 .kosis-public-panel__note { margin-top: 9px; padding: 9px; display: grid; gap: 4px; border-left: 3px solid var(--amber); background: #fff9ef; color: #896437; font-size: 9px; line-height: 1.5; }
 .kosis-public-panel__note strong { color: #755024; font-size: 10px; }
+.sgis-boundary-panel { margin-top: 13px; padding-top: 13px; border-top: 1px solid #e6ecec; }
+.sgis-boundary-panel__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sgis-boundary-panel__heading h4 { margin: 0; color: var(--navy); font-size: 13px; }
+.sgis-boundary-panel__heading > span { color: var(--teal); font-family: "DM Mono", monospace; font-size: 8px; }
+.sgis-boundary-panel__message { margin: 10px 0 0; padding: 10px; display: grid; gap: 4px; border-radius: 7px; background: #edf5f3; color: #55716f; font-size: 9px; line-height: 1.5; }
+.sgis-boundary-panel__message strong { color: var(--navy); font-size: 10px; }
+.sgis-boundary-panel__message--error { background: #fbefdf; color: #896437; }
+.sgis-boundary-panel__message--error strong { color: #755024; }
+.sgis-boundary-panel__summary { margin-top: 10px; padding: 9px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; border: 1px solid #a8d8c8; border-radius: 7px; background: #f4fbf7; }
+.sgis-boundary-panel__summary strong { color: var(--navy); font-size: 10px; }
+.sgis-boundary-panel__summary span { color: #5d7c77; font-family: "DM Mono", monospace; font-size: 8px; }
+.sgis-boundary-panel__items { margin-top: 7px; display: grid; gap: 4px; }
+.sgis-boundary-panel__items div { display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid #e6eeeb; color: #55716f; font-size: 9px; }
+.sgis-boundary-panel__items code { color: #53717a; font-family: "DM Mono", monospace; font-size: 8px; }
+.sgis-boundary-panel__notice { margin: 7px 0 0; color: #7c908d; font-size: 8px; line-height: 1.4; }
 .muted-copy { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .chart-placeholder { min-height: 370px; padding: 45px; display: flex; align-items: center; gap: 70px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); }
 .placeholder-chart { width: 45%; height: 190px; padding: 20px; display: flex; align-items: end; justify-content: space-around; gap: 20px; border-bottom: 1px solid #a8b9ba; border-left: 1px solid #a8b9ba; background: repeating-linear-gradient(to top, transparent 0, transparent 37px, #e7eded 38px); }

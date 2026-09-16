@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
 import { KosisPublicSnapshotPanel } from "../components/KosisPublicSnapshotPanel";
 import { KosisTableSearch } from "../components/KosisTableSearch";
+import { SgisBoundaryStatusPanel } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
 
 const recipes = [
@@ -131,6 +132,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
             </select>
             {source === "kosis" && <KosisTableSearch />}
             {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel />}
+            {!isThreeD && source === "kosis" && <SgisBoundaryStatusPanel />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>

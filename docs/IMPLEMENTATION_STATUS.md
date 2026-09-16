@@ -26,6 +26,7 @@
 - KOSIS 서버 adapter 구현: 통계표 검색·분류/항목 메타데이터·제한된 통계값 조회, KOSIS 키 서버 전용 유지, 통계부호·결측 원문 보존
 - KOSIS controlled snapshot 수집기 구현: DRY-RUN/`--write`/`--public` 분리, 원자료·metadata·요청정보·checksum 보존, `geo_observations` 중복 적재 방지 migration
 - KOSIS 공개 snapshot 읽기 repository·패널 구현: `raw_payload`를 제외한 제한 조회, 최대 2,000행, 공개·미적재·오류 상태와 geometry 연결 대기 안내
+- SGIS 행정구역경계 서버 adapter·클라이언트 상태 패널 구현: 서버 전용 토큰, 2025 시도 경계 조회, EPSG:5179 원본 좌표계와 코드 확인
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -63,6 +64,7 @@ node scripts/smoke-api.mjs
 | `GET /api/kosis-search?searchNm=인구` | KOSIS 통계표 후보 검색 | 구현·키 서버 전용 |
 | `GET /api/kosis-meta?orgId=101&tblId=...` | 선택 표의 분류·항목·단위 코드 조회 | 구현·메타데이터 UI·운영 검증 완료 |
 | `GET /api/kosis-table?...` | 선택 표의 제한된 기간 통계값 조회 | 구현·소규모 운영 검증 완료 |
+| `GET /api/sgis-boundary?year=2025&admCd=non&lowSearch=1` | 시도·시군구·읍면동 행정구역 GeoJSON 조회 | 구현·토큰 비노출·좌표계 명시 |
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 
@@ -76,7 +78,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 
 ### 2. 지도 어댑터
 
-- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·범례·클릭 피처·출처 패널 **(KMA 위치 레이어 slice 구현 완료)**
+- 2D: VWorld OpenLayers 초기화, 도메인 검증, KMA 관측소 레이어·범례·클릭 피처·출처 패널 **(KMA 위치 레이어와 SGIS 경계 확인 slice 구현 완료)**
 - 3D: VWorld WebGL/Cesium 초기화 가능 여부를 먼저 확인하고, 고도·카메라·피처 선택 계약을 별도로 구현
 - 지도 데이터는 `material_type`으로 분리하고 2D 번들과 3D 번들 간 의존성 전파를 막음
 
@@ -97,7 +99,7 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 - Supabase 프로젝트 URL·키와 기존 공개 읽기·학습기록 직접 접근 차단을 확인함. `climate_stations`·`climate_daily_observations`에 10개 관측소·36,530행 백필을 완료했으며, 공개 REST 행 수 `0-0/36530`을 확인함. `climate_period_summaries` 공개 REST 조회는 `HTTP 206`, 1,200행(10개 관측소 × 120개월)으로 확인함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
-- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. controlled snapshot CLI·`0005` migration·공개 snapshot 읽기 패널을 추가했으며, 첫 수업용 표와 실제 Supabase snapshot은 교육 주제 확정 대기
+- KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음. 현재 `/api/kosis-search`와 `/api/kosis-meta`로 선택 절차를 제공하고, `101 / DT_1YL12001E` 후보의 메타데이터·8개 소규모 값 조회까지 운영 검증함. controlled snapshot CLI·`0005` migration·공개 snapshot 읽기 패널·SGIS 경계 상태 패널을 추가했으며, 첫 수업용 표와 실제 Supabase snapshot은 교육 주제 확정 대기
 
 ## 검증 기록
 
