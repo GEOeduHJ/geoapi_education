@@ -1,6 +1,6 @@
 # 다음 작업 준비
 
-> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 기후 데이터 수직 슬라이스·월별 요약 view 구현 완료
+> 현재 단계: API 승인·Vercel 배포 완료, 로그인 없는 공개형 Supabase 읽기 경로 검증 완료, KMA 10년 백필 완료, 월별 요약 view 운영 적용 대기
 >
 > 기준일: 2026-09-16
 
@@ -54,7 +54,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 | --- | --- | --- | --- |
 | 1 | Supabase 연결·PostGIS·공개 RLS 확인 | 프로젝트 생성, `0001`~`0003` migration 실행 | `data_sources`·기후자료 read가 실제 REST에서 동작하고 `learner_attempts` 공개 접근은 `401/403`으로 차단 |
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
-| 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003`·`0004` 적용 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 월별 요약 조회 |
+| 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003` 적용 | 10개 도시·36,530행 백필 완료, `0004` 적용 후 월별 요약 조회 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | 원자료·metadata·지역코드·단위가 DB snapshot에 보존 |
 | 5 | 2D 지도 제작기 | 1~4번의 snapshot | VWorld 배경, 주제 레이어, 범례, 출처·분류 설정 저장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
@@ -121,4 +121,4 @@ node scripts/kma-climate.mjs \
   --write
 ```
 
-적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 월 경계 장기 범위는 `climate_period_summaries` view를 읽고, 월 중간 범위는 일자료로 정확히 계산한다. 다음 단계는 10년 백필과 KOSIS 첫 통계표 adapter다.
+적재 후 `/create/chart`에서 기간·지표를 바꾸어 관측소별 값과 유효 관측일수를 확인한다. 10년 백필은 완료되었고, `0004_climate_period_summaries.sql`을 적용하면 월 경계 장기 범위는 요약 view를 읽는다. 다음 단계는 KOSIS 첫 통계표 adapter다.
