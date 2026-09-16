@@ -115,6 +115,7 @@ export interface KosisMetadataRecord {
 }
 
 const KOSIS_CLASSIFICATION_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const KOSIS_CODE_LIST_FIELDS = new Set(["objL1", "objL2", "objL3", "objL4", "objL5", "objL6", "objL7", "objL8", "itmId"]);
 
 function setQueryValue(url: URL, key: string, value: string | number | undefined): void {
   if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
@@ -128,7 +129,11 @@ export function buildKosisTableUrl(apiKey: string, query: KosisTableQuery): stri
   url.searchParams.set("jsonVD", "Y");
 
   for (const key of ["orgId", "tblId", "objL1", "objL2", "objL3", "objL4", "objL5", "objL6", "objL7", "objL8", "itmId", "prdSe", "startPrdDe", "endPrdDe", "newEstPrdCnt", "prdInterval", "outputFields", "smblChk"] as const) {
-    setQueryValue(url, key, query[key]);
+    const value = query[key];
+    const normalizedValue = typeof value === "string" && KOSIS_CODE_LIST_FIELDS.has(key)
+      ? value.split(/[,\s]+/).filter(Boolean).join(" ")
+      : value;
+    setQueryValue(url, key, normalizedValue);
   }
 
   return url.toString();

@@ -16,7 +16,7 @@ describe("KOSIS adapter", () => {
     const url = buildKosisTableUrl("api-key=with-equals", {
       orgId: "101",
       tblId: "DT_TEST",
-      objL1: "11,26",
+      objL1: "11 26",
       objL2: "ALL",
       itmId: "ITM_1",
       prdSe: "Y",
@@ -27,7 +27,8 @@ describe("KOSIS adapter", () => {
 
     expect(url).toContain("method=getList");
     expect(url).toContain("orgId=101");
-    expect(url).toContain("objL1=11%2C26");
+    expect(url).toContain("objL1=11+26");
+    expect(url).toContain("objL2=ALL");
     expect(url).toContain("startPrdDe=2016");
     expect(url).toContain("apiKey=api-key%3Dwith-equals");
   });

@@ -10,7 +10,7 @@ import {
 } from "../src/lib/kosis.js";
 
 const SAFE_CODE = /^[A-Za-z0-9_.-]{1,40}$/;
-const SAFE_CODE_LIST = /^[A-Za-z0-9_.,-]{1,300}$/;
+const SAFE_CODE_LIST = /^[A-Za-z0-9_.-]+(?:[,\s]+[A-Za-z0-9_.-]+)*$/;
 const PERIODS = new Set<KosisPeriod>(["Y", "Q", "M", "S", "D", "F", "IR"]);
 const PERIOD_PATTERN = /^\d{4,8}$/;
 
@@ -32,7 +32,7 @@ function hasInvalidInteger(value: string | undefined, minimum: number, maximum: 
 }
 
 function countCodes(value: string): number {
-  return value.split(",").filter(Boolean).length;
+  return value.split(/[,\s]+/).filter(Boolean).length;
 }
 
 function estimatePeriods(period: KosisPeriod, start: string | undefined, end: string | undefined, latest: number | undefined): number {
@@ -70,6 +70,7 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
   const orgId = code(queryParam(request, "orgId"));
   const tblId = code(queryParam(request, "tblId"));
   const objL1 = code(queryParam(request, "objL1"), true);
+  const objL2 = code(queryParam(request, "objL2"), true) ?? "ALL";
   const itmId = code(queryParam(request, "itmId"), true);
   const prdSe = queryParam(request, "prdSe")?.trim().toUpperCase() as KosisPeriod | undefined;
   const startPrdDe = queryParam(request, "startPrdDe")?.trim();
@@ -92,7 +93,7 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
   if (outputFields && !/^[A-Za-z0-9_,]{1,500}$/.test(outputFields)) return { error: "INVALID_KOSIS_OUTPUT_FIELDS" };
   if (smblChk && smblChk !== "Y" && smblChk !== "N") return { error: "INVALID_KOSIS_SYMBOL_OPTION" };
 
-  const classificationValues = [objL1];
+  const classificationValues = [objL1, objL2];
   for (const level of [2, 3, 4, 5, 6, 7, 8]) {
     const rawValue = queryParam(request, `objL${level}`)?.trim();
     const value = code(rawValue, true);
@@ -107,6 +108,7 @@ function readTableQuery(request: ApiRequest): { query: KosisTableQuery } | { err
     orgId,
     tblId,
     objL1,
+    objL2,
     itmId,
     prdSe,
     ...(startPrdDe ? { startPrdDe, endPrdDe } : {}),
