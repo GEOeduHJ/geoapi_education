@@ -22,6 +22,8 @@ npm run dev
 - `/inquiry/2d/:activityId`, `/inquiry/3d/:activityId`, `/inquiry/chart/:activityId`: 자료 유형별 탐구 활동
 - `/status`: API 레지스트리와 브라우저 환경 상태
 
+`/create/chart`에는 KMA ASOS 일자료를 Supabase snapshot에서 읽는 기후 비교 실험이 들어 있다. 자료가 없으면 오류를 숨기지 않고 migration·수집기 실행 상태를 안내한다.
+
 ## 품질 확인
 
 ```bash
@@ -39,6 +41,7 @@ node scripts/smoke-api.mjs
 - [API 키 매니페스트](docs/API_KEY_MANIFEST.md)
 - [구현 진행 현황](docs/IMPLEMENTATION_STATUS.md)
 - [백엔드·저장소 선택 결정서](docs/BACKEND_STORAGE_DECISION.md)
+- [Supabase 역할과 공개 이용 정책](docs/SUPABASE_ROLE.md)
 - [다음 작업 준비](docs/NEXT_TASKS.md)
 
 로컬 VWorld 지도는 현재 브라우저의 `localhost` 또는 `127.0.0.1` hostname을 자동으로 domain 파라미터에 사용한다. Vercel 배포 후에는 VWorld에 등록한 운영 hostname을 `VITE_VWORLD_DOMAIN`에 설정한다.

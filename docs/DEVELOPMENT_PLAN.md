@@ -24,6 +24,10 @@
 | 자료 제작 스튜디오 | 어떤 자료를 어떤 공간·시간 단위와 표현 방법으로 만들 것인가? | 지도, 차트, 표, 2D/3D 자료, 출처·변환 기록 |
 | 자료 활용 탐구 | 자료에서 어떤 공간적 패턴·차이·변화를 읽고 어떤 주장을 만들 수 있는가? | 탐구 질문, 증거 선택, 해석, 일반화, 전이·성찰 |
 
+### Supabase의 역할 결정
+
+현재 Supabase는 로그인·회원가입 provider가 아니라 **공개 교육자료의 저장·버전·조회 계층**이다. 로그인 없는 방문자는 Publishable Key와 RLS로 게시 자료와 검증된 기후 데이터만 읽는다. 기상청·KOSIS·SGIS 수집기와 GitHub Actions는 서버 Secret으로 스냅샷·정규화 값·파생지표를 적재한다. 학습자 답안은 현재 브라우저에서 직접 저장하지 않으며, 향후 필요할 때 검증·속도제한된 서버 제출 함수를 별도로 추가한다. 상세 경계는 [Supabase 역할과 공개 이용 정책](SUPABASE_ROLE.md)에 기록한다.
+
 ## 2. API 선정 원칙
 
 ### 원천 API와 애플리케이션의 역할 분리
@@ -133,6 +137,8 @@ React 학습 화면
 | `observations` | `snapshot_id`, `geo_unit_id`, `period_start`, `period_end`, `metric`, `value`, `unit`, `denominator`, `quality_flag` | 시계열 관측·통계 정규화 |
 | `geo_features` | `snapshot_id`, `feature_type`, `geometry`, `properties_json` | 지진·관광지·충전소·생물종 등 점·선·면 자료 |
 | `derived_metrics` | `input_snapshot_ids`, `formula`, `value`, `unit`, `missing_rule`, `created_at` | 평균·증감률·비율·표준화·분류 결과 |
+| `climate_stations` | `station_id`, `name_ko`, `longitude`, `latitude`, `altitude_m`, `law_code` | KMA ASOS 관측소 카탈로그. 개인정보 없이 공개 읽기 |
+| `climate_daily_observations` | `station_id`, `snapshot_id`, `observation_date`, `ta_avg`, `ta_max`, `ta_min`, `rn_day`, `ws_avg`, `hm_avg`, `ss_day`, `si_day`, `quality_flags` | KMA 일자료 정규화 행. 원자료 값은 `raw_values`, 원천 재현정보는 snapshot에 보존 |
 | `materials` | `id`, `session_type`, `mode`, `title`, `recipe_json`, `status` | 제작된 지도·차트·표·3D 장면 |
 | `activities` | `material_id`, `inquiry_type`, `stages_json`, `prompt_json`, `rubric_json` | 탐구 활동과 평가 기준 |
 | `attempts` | `activity_id`, `anonymous_learner_id`, `responses_json`, `evidence_json`, `started_at` | 선택적 학습 과정 기록. 개인정보 최소화 |

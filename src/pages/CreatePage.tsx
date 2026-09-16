@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ClimateComparison } from "../components/ClimateComparison";
 
 const recipes = [
   { label: "관계형", title: "2D 지도자료", description: "분포·밀도·접근성·변화를 평면 지도와 레이어로 구성", to: "/create/2d", accent: "teal" },
@@ -144,11 +145,7 @@ export function ChartCreatePage() {
         <div><Link className="back-link" to="/create">← 자료 유형 선택</Link><p className="eyebrow">MATERIAL STUDIO / CHART</p><h1>통계·차트자료 제작</h1><p>시계열·지역 비교·지표 간 관계를 학습자가 읽고 설명할 수 있도록 구성합니다.</p></div>
         <span className="dimension-mark dimension-mark--chart">CHART</span>
       </section>
-      <div className="chart-placeholder">
-        <div className="placeholder-chart"><span className="bar bar-1" /><span className="bar bar-2" /><span className="bar bar-3" /><span className="bar bar-4" /><span className="bar bar-5" /></div>
-        <div><p className="eyebrow">CHART ADAPTER</p><h2>지표를 선택하면 비교 차트가 생성됩니다.</h2><p>현재는 KOSIS·기상청·World Bank 스냅샷을 공통 데이터 모델로 변환하는 단계입니다.</p></div>
-      </div>
+      <ClimateComparison />
     </div>
   );
 }
-

@@ -18,6 +18,9 @@
 - Supabase/PostGIS 초기 스키마: `data_sources` → `source_snapshots` → `geo_observations` → `learning_materials` → `inquiry_activities` → `learner_attempts`
 - 로그인 없는 공개형 MVP RLS migration: Publishable Key는 게시 자료 읽기만 허용하고, `learner_attempts`는 브라우저 직접 접근을 차단
 - 로그인 없이 사용할 수 있는 공개 이용 정책 확정: 학습 기록 저장은 서버 제출 경로를 구현할 때까지 선택 사항으로 둠
+- KMA ASOS 수집기 구현: 관측소 목록·31일 이하 일자료 기간 조회·EUC-KR 파싱·결측 플래그·dry-run/`--write` 분리
+- KMA 기후 정규화 migration 구현: `climate_stations`, `climate_daily_observations`, 공개 SELECT RLS, 명시적 public snapshot
+- `/create/chart`에 Supabase 기반 KMA 기후 비교 화면 구현: 지표·기간 선택, 관측소별 평균, 유효 관측일수, 빈 자료·오류 상태
 - Vercel SPA rewrite 설정
 
 ## 실행 명령
@@ -55,8 +58,10 @@ node scripts/smoke-api.mjs
 
 이 함수들은 임의 URL을 전달받지 않고 provider별 고정 endpoint와 허용 파라미터만 사용한다.
 
+KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [0003_kma_climate.sql](../supabase/migrations/0003_kma_climate.sql)에 있다. 현재 3일 샘플 dry-run은 관측소 3개·9행 파싱까지 통과했고, 원격 적재는 migration 실행 후 `--write`로 수행한다.
+
 - KOSIS에서 첫 번째 통계표 2~3개를 선정하고 메타데이터·단위·시점·지역코드 확정
-- 기상청 ASOS의 관측소·변수·최근 10년 기간을 확정하고 31일 단위 배치 수집기 작성
+- 기상청 ASOS의 관측소·변수·최근 10년 기간을 확정하고 31일 단위 배치 수집기 작성 **(구현 완료, 샘플 파싱 확인)**
 - SGIS 데이터 API의 경계·통계 응답을 공통 `GeoObservation` 모델로 정규화
 - Supabase migration을 별도 프로젝트에 적용하고 RLS를 교사 제작자·학습자 역할에 맞게 좁힘
 - 대안 비교 결과에 따라 Supabase를 기본 provider로 유지하고 repository 경계를 보존
@@ -81,7 +86,7 @@ node scripts/smoke-api.mjs
 
 ## 현재 보류 사유
 
-- Supabase 프로젝트 URL·키는 확보했으며, 공개 읽기·학습기록 직접 접근 차단의 운영 REST 스모크 검증을 완료함. 스키마 재생성이나 새 프로젝트 전환 시 두 migration을 순서대로 다시 적용해야 함
+- Supabase 프로젝트 URL·키는 확보했으며, 기존 공개 읽기·학습기록 직접 접근 차단의 운영 REST 스모크 검증을 완료함. 기후 기능을 사용하려면 새 `0003_kma_climate.sql`을 운영 프로젝트에 추가 적용해야 함
 - VWorld 운영 hostname은 `geoapieducation.vercel.app`; VWorld 허용목록 등록과 Vercel 환경변수 반영 후 브라우저 지도 초기화를 검증
 - 도로명주소는 검색·좌표·상세주소·지도 중 필요한 모듈이 확정되지 않아 키를 비워둠
 - KOSIS는 학습 주제별 통계표를 먼저 선택해야 호출 파라미터를 고정할 수 있음
