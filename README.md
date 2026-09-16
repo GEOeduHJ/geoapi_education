@@ -1,0 +1,44 @@
+# GeoLab Classroom
+
+지리교육을 위한 자료 제작·자료 활용 탐구 학습 사이트의 초기 구현이다.
+
+## 빠른 시작
+
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+현재 작업 공간에는 사용자가 발급한 키가 들어간 `.env.local`이 이미 있다. 이 파일은 `.gitignore`로 제외되어 있으며, 실제 배포에서는 Vercel Environment Variables 또는 GitHub Actions Secrets를 사용한다.
+
+## 주요 경로
+
+- `/create`: 자료 제작 허브
+- `/create/2d`: VWorld 2D 지도자료 작업공간 계약
+- `/create/3d`: VWorld 3D 지도자료 작업공간 계약
+- `/create/chart`: 통계·차트자료 작업공간 계약
+- `/inquiry`: 6단계 자료 탐구 허브
+- `/inquiry/2d/:activityId`, `/inquiry/3d/:activityId`, `/inquiry/chart/:activityId`: 자료 유형별 탐구 활동
+- `/status`: API 레지스트리와 브라우저 환경 상태
+
+## 품질 확인
+
+```bash
+npm run typecheck
+npm test
+npm run build
+node scripts/smoke-api.mjs
+```
+
+스모크 테스트는 키나 응답 본문을 출력하지 않는다. SGIS 인증은 현재 성공하며, 기상청 ASOS·공공데이터포털 단기예보는 제공기관별 활용신청/활성화 상태에 따라 `DEFER`로 표시될 수 있다.
+
+## 문서
+
+- [전체 개발 계획](docs/DEVELOPMENT_PLAN.md)
+- [API 키 매니페스트](docs/API_KEY_MANIFEST.md)
+- [구현 진행 현황](docs/IMPLEMENTATION_STATUS.md)
+- [백엔드·저장소 선택 결정서](docs/BACKEND_STORAGE_DECISION.md)
+- [다음 작업 준비](docs/NEXT_TASKS.md)
+
+로컬 VWorld 지도는 현재 브라우저의 `localhost` 또는 `127.0.0.1` hostname을 자동으로 domain 파라미터에 사용한다. Vercel 배포 후에는 VWorld에 등록한 운영 hostname을 `VITE_VWORLD_DOMAIN`에 설정한다.

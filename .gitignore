@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+.vercel/
+coverage/
+.DS_Store
+*.log
+
+# Never commit local credentials. Keep only the template in version control.
+.env
+.env.*
+!.env.example
+!.env.*.example
+

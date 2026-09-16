@@ -1,0 +1,99 @@
+# 다음 작업 준비
+
+> 현재 단계: API 승인 확인 완료, 저장소 초기 연결 전
+>
+> 기준일: 2026-09-16
+
+## 사용자가 준비할 입력
+
+### Supabase
+
+필수:
+
+- Supabase Project URL
+- 브라우저용 Publishable Key를 현재 코드의 `VITE_SUPABASE_ANON_KEY`에 설정
+- 서버용 Secret Key를 현재 코드의 `SUPABASE_SERVICE_ROLE_KEY`에 설정
+- `0001_initial_schema.sql` 실행 여부
+
+Secret Key·계정 비밀번호·데이터베이스 비밀번호는 채팅이나 GitHub에 올리지 않는다. 로컬 `.env.local`과 Vercel Environment Variables에 직접 저장한다.
+
+선택:
+
+- Storage bucket 이름과 공개/비공개 여부
+- 학습자 인증 방식: 초기에는 미로그인 공개 탐구, 이후 anonymous sign-in 또는 교사 계정
+
+### VWorld
+
+Vercel 배포 후 다음 두 값을 확정한다.
+
+1. 실제 운영 hostname
+2. VWorld 관리 화면에 등록한 hostname
+
+두 값이 일치하도록 Vercel 환경변수 `VITE_VWORLD_DOMAIN`을 설정한다. 로컬에서는 코드가 현재 브라우저 hostname을 자동 사용한다.
+
+### KOSIS
+
+첫 번째 탐구 자료로 사용할 통계표의 다음 정보가 필요하다.
+
+- `orgId`
+- `tblId`
+- 지역코드 수준
+- 지표·항목 코드
+- 기준연도 범위
+- 총량 또는 비율 분모
+
+## 구현 작업 순서
+
+| 순서 | 작업 | 선행조건 | 완료 기준 |
+| --- | --- | --- | --- |
+| 1 | Supabase 연결·PostGIS·RLS 확인 | 프로젝트 생성, migration 실행 | `sources`와 published material read가 실제 REST에서 동작 |
+| 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
+| 3 | KMA 최근 10년 백필 | 2번의 작은 샘플 성공 | 5~10개 도시, 완결 연도, 결측률·산출식 포함 요약 생성 |
+| 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | 원자료·metadata·지역코드·단위가 DB snapshot에 보존 |
+| 5 | 2D 지도 제작기 | 1~4번의 snapshot | VWorld 배경, 주제 레이어, 범례, 출처·분류 설정 저장 |
+| 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
+| 7 | 3D 지형·입체 통계 | 5번의 공통 data contract | 3D 장면과 2D/표 fallback, 고도·배율·출처 표시 |
+| 8 | 배포·운영 QA | Vercel hostname, secrets | CI, API failure fallback, 모바일·접근성·키 노출 검사 |
+
+## 병렬 에이전트 작업 레인
+
+작업 충돌을 줄이기 위해 migration·공통 계약을 먼저 고정한다.
+
+```text
+Lane A: Supabase schema / repositories / RLS
+        ↓
+Lane B: KMA ingest / climate metrics
+Lane C: KOSIS ingest / metadata normalization
+Lane D: 2D VWorld renderer / material recipe UI
+Lane E: 3D renderer / terrain interaction
+        ↓
+Lane F: inquiry flow / provenance / E2E QA
+```
+
+각 레인은 다음을 커밋 단위에 포함한다.
+
+- 변경 파일 범위
+- data contract 또는 schema version
+- fixture와 실제 데이터의 구분
+- `npm run typecheck`, `npm test`, `npm run build` 결과
+- API 출처·약관·호출량 확인일
+- 다른 레인과의 의존성 또는 충돌 가능성
+
+## 첫 번째 실제 구현 단위
+
+첫 구현은 다음 범위로 제한한다.
+
+```text
+KMA ASOS station info
+      +
+KMA ASOS daily period data
+      ↓
+Supabase source_snapshots / geo_observations
+      ↓
+최근 10년 주요 도시 기후 비교표
+      ↓
+2D 자료 제작 → 비교·변화 탐구 활동
+```
+
+이 단위를 끝낸 뒤에 KOSIS 주제도와 3D 지형 자료를 병렬로 확장한다. 원천 API를 학생 화면에서 직접 반복 호출하지 않고, 작은 범위의 수집·검증·스냅샷 생성이 통과한 뒤 범위를 늘린다.
+
