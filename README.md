@@ -44,6 +44,5 @@ node scripts/smoke-api.mjs
 - [Supabase 역할과 공개 이용 정책](docs/SUPABASE_ROLE.md)
 - [다음 작업 준비](docs/NEXT_TASKS.md)
 - [KOSIS adapter 계약](docs/KOSIS_ADAPTER.md)
-- [KOSIS adapter 계약](docs/KOSIS_ADAPTER.md)
 
 로컬 VWorld 지도는 현재 브라우저의 `localhost` 또는 `127.0.0.1` hostname을 자동으로 domain 파라미터에 사용한다. Vercel 배포 후에는 VWorld에 등록한 운영 hostname을 `VITE_VWORLD_DOMAIN`에 설정한다.
