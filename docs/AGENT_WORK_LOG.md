@@ -104,7 +104,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 렌더 수준 검증은 미실시(이 세션에 브라우저 도구 없음). Production에서 시도 칩·필터 문구 1회 확인 권장. 실제 API·Supabase 호출 없음.
 - 차단/주의: 없음
 - 다음 작업: `2D-03` — 시도급 KOSIS 표 controlled snapshot 적재 후 실제 주제도 검증
-- 커밋: 미커밋 로컬 변경
+- 커밋: `12402f4`에 포함
 
 ### 2026-09-17 — OpenCode — 2D-03 (적재 전 단계)
 
@@ -158,7 +158,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 검증: KOSIS 검색 API 실측(HTTP 200). 키·원문 비밀값 기록 없음
 - 차단/주의: 없음
 - 다음 작업: Phase A 구조 일반화(아래 계획 참조) 또는 1차 배치 주제 확정
-- 커밋: 미커밋 로컬 변경
+- 커밋: `88c9f20`에 포함 (docs 변경분)
 
 ### 2026-09-17 — OpenCode — PHASE-A 구조 일반화
 
@@ -169,7 +169,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 미실시·없음. 현 snapshot 단일 연도라 실동작 동일
 - 차단/주의: 없음
 - 다음 작업: Phase B 1차 배치 적재 (인구·출산/경제/환경·교통/사업체·주택)
-- 커밋: 미커밋 로컬 변경
+- 커밋: `88c9f20`에 포함
 
 ### 2026-09-17 — OpenCode — PHASE-B1 GRDP 적재·dataset-keyed 일반화
 
@@ -180,7 +180,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: KOSIS 테이블 API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
 - 차단/주의: 없음
 - 다음 작업: 사교육비·PM10/PM2.5·자동차·출산성비·사업체 순차 적재
-- 커밋: 미커밋 로컬 변경
+- 커밋: `88c9f20`에 포함
 
 ### 2026-09-17 — OpenCode — PHASE-B2 배치 4종 적재
 
@@ -191,7 +191,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: KOSIS API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
 - 차단/주의: 없음
 - 다음 작업: 배포 후 7개 dataset 렌더 확인
-- 커밋: 미커밋 로컬 변경
+- 커밋: `88c9f20`에 포함
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
