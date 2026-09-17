@@ -444,10 +444,15 @@ git log --oneline -5
 **검증:** typecheck/test(103)/build 통과. 실측 조인 PM10·PM25 17/17(전남광주→24·36 fan-out) 통과.
 
 ### PHASE-E — TourAPI 관광지 점분포 (완료, 2026-09-17)
-
 **완료 내용:** `scripts/tourapi-snapshot.mjs` 신규(지역별 17 snapshots·6,677행·좌표 100%). POI 포인트 파이프라인: `tourapi-adapter`·`Poi2DWorkspace`(검색·목록·CSV·출처)·`updateVWorld2DPointLayer`·점 클릭 상세. `DatasetDefinition.kind`(polygon/point) 추가로 choropleth/point 분기. 정적·DB 카탈로그에 관광지 ready 등록(지역 지표 17건). 국내 ready 9개. EV는 시도 단위 상한 초과로 시군구 분할 계획으로 이관.
 
 **검증:** typecheck/test(109)/build 통과. 실측 POI 변환·표·출처 통과.
+
+### PHASE-F — 단기예보 클릭 조회 (완료, 2026-09-17)
+
+**완료 내용:** `src/lib/forecast.ts` 신규(DFS 격자 변환·발표회차 계산·프록시 읽기·시각별 정규화·하늘/강수 라벨). QUERY에 예보 모드 토글, 지도 빈 곳 클릭 → 5km 격자 예보(`ForecastPanel`: 기온·하늘·강수확률·강수형태 12시각). 현재성 자료 배지 명시. EV 적재는 data.go.kr 일일한도(429) 소진으로 내일 재개 — 스크립트에 재시도·대기 로직 추가済.
+
+**검증:** typecheck/test(115)/build 통과. Production 프록시 실측 200/980행.
 
 | 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | `f008dff` | typecheck/test(94)/build 통과 |
 
@@ -456,6 +461,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 | 2026-09-17 | OpenCode | PHASE-D: 에어코리아 적재·provider 일반화·ready 8개 | `fdac808` | typecheck/test(103)/build 통과, 실측 fan-out 통과 |
 | 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | `fdac808` | typecheck/test(109)/build 통과, 실측 POI 통과 |
+| 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | 미커밋 로컬 변경 | typecheck/test(115)/build 통과, 프록시 실측 통과 |
 
 ## 15. 문서 기준 우선순위
 

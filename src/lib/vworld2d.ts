@@ -36,6 +36,7 @@ interface VWorldMap {
     pixel: number[],
     callback: (feature: VWorldFeature) => VWorldFeature | false,
   ): VWorldFeature | false;
+  getCoordinateFromPixel?(pixel: number[]): Coordinate | null;
   on(event: string, listener: (event: VWorldMapEvent) => void): void;
   setBasemapType?(basemapType: string): void;
   setTarget(target: string | HTMLElement | null): void;
@@ -616,6 +617,14 @@ export function updateVWorld2DBoundaryLayer(
   boundaryLayerByMap.set(map, boundaryLayer);
 }
 
+/** Converts VWorld Web Mercator map coordinates back to WGS84 lon/lat. */
+export function webMercatorToLonLat([x, y]: [number, number]): { lon: number; lat: number } {
+  return {
+    lon: (x / GRS80_SEMI_MAJOR) * 180 / Math.PI,
+    lat: Math.atan(Math.sinh(y / GRS80_SEMI_MAJOR)) * 180 / Math.PI,
+  };
+}
+
 export function createVWorld2DMap(
   runtime: VWorld2DRuntime,
   containerId: string,
@@ -624,6 +633,7 @@ export function createVWorld2DMap(
   basemapType: VWorldBasemapKey = "GRAPHIC_WHITE",
   stationValues: Record<string, number | null> | null = null,
   onSelectPoi: (poiId: string | null) => void = () => undefined,
+  onEmptyClick: (lon: number, lat: number) => void = () => undefined,
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
@@ -651,7 +661,18 @@ export function createVWorld2DMap(
       return;
     }
     const stationId = feature === false ? null : feature?.get("stationId");
-    onSelectStation(typeof stationId === "string" ? stationId : null);
+    if (typeof stationId === "string") {
+      onSelectStation(stationId);
+      return;
+    }
+    onSelectStation(null);
+    const coordinate = typeof map.getCoordinateFromPixel === "function"
+      ? map.getCoordinateFromPixel(event.pixel)
+      : null;
+    if (coordinate) {
+      const { lon, lat } = webMercatorToLonLat(coordinate);
+      onEmptyClick(lon, lat);
+    }
   });
   map.updateSize();
   runtime.vw._vmap = map;

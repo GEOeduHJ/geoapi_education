@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Climate2DWorkspace, DEFAULT_CLIMATE_FROM, DEFAULT_CLIMATE_TO, useClimateDataset } from "../components/Climate2DWorkspace";
 import { ClimateComparison } from "../components/ClimateComparison";
 import { DatasetSelector } from "../components/DatasetSelector";
+import { ForecastPanel, type ForecastResult } from "../components/ForecastPanel";
 import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
 import { Snapshot2DWorkspace } from "../components/Snapshot2DWorkspace";
@@ -12,6 +13,7 @@ import { VWorld2DMap } from "../components/VWorld2DMap";
 import { useDatasetCatalog, getDatasetIndicators, type DatasetScope } from "../lib/dataset-catalog";
 import { getKosisDimensions } from "../lib/kosis-dimensions";
 import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
+import { fetchForecast, groupForecastByTime, resolveForecastBase, toForecastGrid } from "../lib/forecast";
 import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { AIRKOREA_SIDO_TO_SGIS_ADM_CD, KOSIS_SGG_TO_SGIS_ADM_CD, TOUR_AREA_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
@@ -119,6 +121,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [indicatorKey, setIndicatorKey] = useState("");
   const [dimSelections, setDimSelections] = useState<Record<string, string>>({});
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
+  const [forecastMode, setForecastMode] = useState(false);
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const mapExportRef = useRef<HTMLDivElement | null>(null);
   const datasets = useDatasetCatalog(scope);
   const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
@@ -305,6 +309,18 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const boundaryOptions = sgisBoundaries?.data.features ?? [];
   const selectedBoundaryName = boundaryOptions.find((feature) => feature.properties.adm_cd === boundaryCode)?.properties.adm_nm;
 
+  async function handleForecastClick(lon: number, lat: number) {
+    const { nx, ny } = toForecastGrid(lat, lon);
+    const base = resolveForecastBase();
+    setForecast({ lon, lat, nx, ny, baseDate: base.baseDate, baseTime: base.baseTime, slots: [], status: "loading", error: null });
+    const result = await fetchForecast(nx, ny, base);
+    setForecast((prev) => {
+      if (!prev || prev.nx !== nx || prev.ny !== ny || prev.baseTime !== base.baseTime) return prev;
+      if (result.error) return { ...prev, status: "error", error: result.error };
+      return { ...prev, slots: groupForecastByTime(result.data), status: "ready" };
+    });
+  }
+
   return (
     <div className="page-stack">
       <section className="page-intro page-intro--with-back">
@@ -347,6 +363,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
               poiPoints={poiPoints}
               onSelectPoi={setSelectedPoiId}
               selectedPoi={selectedPoiDetail}
+              forecastMode={forecastMode}
+              onForecastClick={handleForecastClick}
             />
           </div>
         ) : (
@@ -410,6 +428,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             )}
             {!isThreeD && isDomestic && (
               <>
+                <div className="control-row"><span>지도 클릭 예보 조회</span><button className={`toggle${forecastMode ? " is-on" : ""}`} type="button" aria-pressed={forecastMode} aria-label="지도 클릭 예보 조회" onClick={() => setForecastMode((value) => !value)}><i /></button></div>
+                {forecastMode && <small className="field-help">지도의 빈 곳을 클릭하면 5km 격자 단기예보를 조회합니다.</small>}
                 <label className="field-label" htmlFor="boundary-filter">지도에 표시할 시도</label>
                 <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
                   <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
@@ -443,6 +463,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
       {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
       {isPoiDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} observations={poiObservations} error={kosisDataset.error ?? sgisBoundaryError} exportSlug={datasetKey} />}
+      {!isThreeD && isDomestic && forecast && <ForecastPanel result={forecast} onClose={() => setForecast(null)} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

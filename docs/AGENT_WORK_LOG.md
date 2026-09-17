@@ -280,6 +280,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: EV 시군구 분할 또는 단기예보 클릭 조회
 - 커밋: `fdac808 feat: TourAPI attraction point distribution pipeline`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — PHASE-F 단기예보 클릭 조회
+
+- 결과: 완료 (EV 적재는 일일한도 대기)
+- 변경: `src/lib/forecast.ts`+테스트(신규 6개), `src/components/ForecastPanel.tsx`(신규), `src/lib/vworld2d.ts`(빈 곳 클릭 좌표), `src/components/VWorld2DMap.tsx`(예보 모드 전달), `src/pages/CreatePage.tsx`(토글·조회·패널), `scripts/ev-snapshot.mjs`(신규, 미적재)
+- 결정/데이터: DFS 공식 실측 검증(서울시청→60,127). 예보는 현재성 배지. EV는 45만 행 집계 확인 후 429로 중단, 재시도 로직 추가하고 내일 재개
+- 검증: typecheck/test(115)/build 통과. Production 프록시 실측
+- 브라우저/API: 클릭→좌표 변환은 브라우저 확인 필요. 키·원문 비밀값 기록 없음
+- 차단/주의: EV data.go.kr 일일한도 (429) — 내일 `node scripts/ev-snapshot.mjs --write` 재개
+- 다음 작업: EV 적재 재개 → 세계 5종
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

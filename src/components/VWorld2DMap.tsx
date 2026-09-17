@@ -47,6 +47,8 @@ export function VWorld2DMap({
   poiPoints = null,
   onSelectPoi = null,
   selectedPoi = null,
+  forecastMode = false,
+  onForecastClick = null,
 }: {
   boundaries?: SgisBoundaryResponse | null;
   boundaryValues?: Record<string, BoundaryJoinValue> | null;
@@ -57,6 +59,8 @@ export function VWorld2DMap({
   poiPoints?: PoiPointInput[] | null;
   onSelectPoi?: ((poiId: string | null) => void) | null;
   selectedPoi?: { title: string; address: string } | null;
+  forecastMode?: boolean;
+  onForecastClick?: ((lon: number, lat: number) => void) | null;
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
@@ -67,6 +71,8 @@ export function VWorld2DMap({
   const stationValuesRef = useRef(stationValues);
   const poiPointsRef = useRef(poiPoints);
   const onSelectPoiRef = useRef(onSelectPoi);
+  const forecastModeRef = useRef(forecastMode);
+  const onForecastClickRef = useRef(onForecastClick);
   const [stations, setStations] = useState<ClimateStation[]>([]);
   const [stationStatus, setStationStatus] = useState<"loading" | "ready">("loading");
   const [stationError, setStationError] = useState<string | null>(null);
@@ -110,6 +116,8 @@ export function VWorld2DMap({
     stationValuesRef.current = stationValues;
     poiPointsRef.current = poiPoints;
     onSelectPoiRef.current = onSelectPoi;
+    forecastModeRef.current = forecastMode;
+    onForecastClickRef.current = onForecastClick;
     const currentMap = mapRef.current;
     if (currentMap) {
       updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries, boundaryValues);
@@ -126,7 +134,18 @@ export function VWorld2DMap({
 
     loadVWorld2D().then((runtime) => {
       if (cancelled || !mapElementRef.current) return;
-      const map = createVWorld2DMap(runtime, mapId, displayStations, setSelectedStationId, basemapTypeRef.current, stationValuesRef.current, (poiId) => onSelectPoiRef.current?.(poiId));
+      const map = createVWorld2DMap(
+        runtime,
+        mapId,
+        displayStations,
+        setSelectedStationId,
+        basemapTypeRef.current,
+        stationValuesRef.current,
+        (poiId) => onSelectPoiRef.current?.(poiId),
+        (lon, lat) => {
+          if (forecastModeRef.current) onForecastClickRef.current?.(lon, lat);
+        },
+      );
       mapRef.current = { runtime, map };
       updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
       updateVWorld2DPointLayer(runtime, map, poiPointsRef.current);
