@@ -368,6 +368,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production 에러 문구 확인 후 해당 단계 수정
 - 커밋: `f1b090e fix: granular 3D init diagnostics`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01f start 전 초기화 완성
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts` (`setInitPosition`·`setLogoVisible`·`setNavigationZoomVisible`을 문서 순서대로 호출)
+- 결정/데이터: Production 문구 "start 실패"로 좁혀짐. 문서 예제와 비교해 빠진 setter 호출이 원인으로 판단
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: `df31afe fix: complete 3D init sequence before start`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
