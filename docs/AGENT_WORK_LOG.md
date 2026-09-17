@@ -148,7 +148,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 렌더 수준 미확인(이 세션 브라우저 도구 없음). 배포 후 KOSIS 선택 시 17개 순위 그래프·표·CSV·provenance 확인 필요. 추가 API 호출 없음
 - 차단/주의: 없음
 - 다음 작업: Production `/create/2d/domestic`에서 KMA·KOSIS 전환 렌더 확인 후 국내 완성 선언, 이후 2D-04 착수 여부 결정
-- 커밋: 미커밋 로컬 변경
+- 커밋: `c695e54 feat: KOSIS chart, table and provenance workspace`에 포함 (origin/main push済, Vercel 배포 트리거)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 

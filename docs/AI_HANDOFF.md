@@ -385,7 +385,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | 2D-03: DT_1YL21281 대응표 확정·DRY-RUN·crosswalk 연결 (적재 전) | `12402f4` | typecheck/test(79)/build 통과, 0005 적용 확인 후 --write 대기 |
 | 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | `12402f4` | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
 | 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | `12402f4` | typecheck/test(81)/build 통과 |
-| 2026-09-17 | OpenCode | KOSIS-VIZ: 그래프·표·provenance 연결, capabilities 복원 | 미커밋 로컬 변경 | typecheck/test(85)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | KOSIS-VIZ: 그래프·표·provenance 연결, capabilities 복원 | `c695e54` | typecheck/test(85)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위
 
