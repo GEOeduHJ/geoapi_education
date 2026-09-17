@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateObservationsByRegion,
+  filterObservationsByClassification,
   filterObservationsByYear,
   listObservationYears,
   normalizePublicObservation,
@@ -114,8 +115,7 @@ function monthlyObservation(id: string, regionCode: string, observedAt: string, 
   };
 }
 
-describe("regional yearly aggregation", () => {
-  it("returns yearly rows untouched", () => {
+describe("regional yearly aggregation", () => {  it("returns yearly rows untouched", () => {
     const rows = [
       monthlyObservation("y-11", "11", "2024-01-01", 100),
       monthlyObservation("y-21", "21", "2024-01-01", 200),
@@ -138,5 +138,37 @@ describe("regional yearly aggregation", () => {
       attributes: expect.objectContaining({ aggregated: "year-mean", source_count: 2 }),
     });
     expect(aggregated.find((row) => row.region_code === "21")).toMatchObject({ value: 50 });
+  });
+});
+
+function classifiedObservation(id: string, classifications: unknown): PublicGeoObservation {
+  return {
+    id,
+    snapshot_id: "snapshot-1",
+    observed_at: "2024-01-01",
+    region_code: "11",
+    label: "서울",
+    value: 1,
+    unit: "개",
+    category: null,
+    attributes: { classifications },
+  };
+}
+
+describe("classification filtering", () => {
+  const rows = [
+    classifiedObservation("r-1", [{ level: 1, code: "11" }, { level: 2, code: "C" }]),
+    classifiedObservation("r-2", [{ level: 1, code: "11" }, { level: 2, code: "G" }]),
+    classifiedObservation("r-3", [{ level: 1, code: "11" }]),
+  ];
+
+  it("keeps rows matching the classification code at the given level", () => {
+    expect(filterObservationsByClassification(rows, 2, "C").map((row) => row.id)).toEqual(["r-1"]);
+    expect(filterObservationsByClassification(rows, 1, "11").map((row) => row.id)).toEqual(["r-1", "r-2", "r-3"]);
+  });
+
+  it("treats a blank code as no filtering and never matches malformed rows", () => {
+    expect(filterObservationsByClassification(rows, 2, "  ")).toBe(rows);
+    expect(filterObservationsByClassification(rows, 2, "Z")).toEqual([]);
   });
 });

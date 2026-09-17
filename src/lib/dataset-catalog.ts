@@ -32,6 +32,19 @@ export interface DatasetDefinition {
    * null이면 기존처럼 최신 공개 snapshot을 읽는다.
    */
   snapshotId: string | null;
+  /**
+   * Phase C 지표 선택지. DB `dataset_catalog.metadata.indicators`와 연결되며,
+   * 빈 배열이면 단일 지표 dataset으로 취급한다. 정적 카탈로그는 항상 빈 배열이다.
+   */
+  indicators: DatasetIndicator[];
+}
+
+/** 한 dataset 안의 지표 선택지. 각 지표는 자체 공개 snapshot을 가리킨다. */
+export interface DatasetIndicator {
+  key: string;
+  label: string;
+  snapshotId: string | null;
+  unit: string;
 }
 
 /**
@@ -56,6 +69,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-city-park-per-capita",
@@ -73,6 +87,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-grdp-per-capita",
@@ -90,6 +105,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-private-edu-cost",
@@ -107,6 +123,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-vehicle-registrations",
@@ -124,6 +141,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-birth-sex-ratio",
@@ -141,6 +159,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "kosis-sido-business-count",
@@ -158,6 +177,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "supabase",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "airkorea-station-daily",
@@ -175,6 +195,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "planned",
     supportedLevels: ["sido"],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "world-bank-population-density",
@@ -192,6 +213,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "planned",
     supportedLevels: [],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "open-meteo-city-climate",
@@ -209,6 +231,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "planned",
     supportedLevels: [],
     snapshotId: null,
+    indicators: [],
   },
   {
     key: "usgs-earthquake-history",
@@ -226,6 +249,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     storage: "planned",
     supportedLevels: [],
     snapshotId: null,
+    indicators: [],
   },
 ];
 
@@ -240,6 +264,12 @@ export function getDataset(datasetKey: string): DatasetDefinition | null {
 /** 이 데이터셋을 해당 경계 수준의 choropleth로 그릴 수 있는지 확인한다. */
 export function supportsBoundaryLevel(dataset: DatasetDefinition, level: BoundaryLevel): boolean {
   return dataset.supportedLevels.includes(level);
+}
+
+/** 지표 선택지. DB에 없으면 단일 지표(기존 동작)로 폴백한다. */
+export function getDatasetIndicators(dataset: DatasetDefinition): DatasetIndicator[] {
+  if (dataset.indicators.length > 0) return dataset.indicators;
+  return [{ key: "default", label: dataset.title, snapshotId: dataset.snapshotId, unit: "" }];
 }
 
 /**
@@ -261,7 +291,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const CATALOG_COLUMNS =
-  "dataset_key,scope,title,provider,topic,space_label,coverage_label,period_min,period_max,period_label,capabilities,status,storage_mode,description,source_url,snapshot_id";
+  "dataset_key,scope,title,provider,topic,space_label,coverage_label,period_min,period_max,period_label,capabilities,status,storage_mode,description,source_url,snapshot_id,metadata";
 
 /**
  * The DB `status` column (draft/published/retired) is a publishing workflow
@@ -305,7 +335,24 @@ export function mapDatasetCatalogRow(value: unknown): DatasetDefinition | null {
     // domestic published 행은 시도 단위까지만 보장되고, world 행은 국내 경계를 쓰지 않는다.
     supportedLevels: scope === "domestic" ? ["sido"] : [],
     snapshotId: typeof value.snapshot_id === "string" && value.snapshot_id.trim() ? value.snapshot_id : null,
+    indicators: parseIndicatorList(isRecord(value.metadata) ? value.metadata["indicators"] : undefined),
   };
+}
+
+function parseIndicatorList(value: unknown): DatasetIndicator[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): DatasetIndicator[] => {
+    if (!isRecord(entry)) return [];
+    const { key, label, snapshotId, unit } = entry as Record<string, unknown>;
+    if (typeof key !== "string" || !key.trim()) return [];
+    if (typeof label !== "string" || !label.trim()) return [];
+    return [{
+      key,
+      label,
+      snapshotId: typeof snapshotId === "string" && snapshotId.trim() ? snapshotId : null,
+      unit: typeof unit === "string" ? unit : "",
+    }];
+  });
 }
 
 export async function fetchPublishedDatasetCatalog(): Promise<{ data: DatasetDefinition[]; error: string | null }> {

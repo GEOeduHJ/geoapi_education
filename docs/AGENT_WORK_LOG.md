@@ -226,6 +226,38 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 브라우저에서 밝은 회색지도 선택·주제도 겹침·출처 표시 확인
 - 커밋: `fb3314a feat: Esri light gray canvas basemap option`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — VIZ-TYPE 지표 세분화 유형화 + 지도 크기 조절
+
+- 결과: 완료 (세분화 적재는 후속)
+- 변경: `src/components/VWorld2DMap.tsx`(지도 크기 기본/크게/더 크게 + `updateSize`), `src/app/styles.css`(size 토글), `docs/AI_HANDOFF.md`
+- 결정/데이터: 세분화 실측 — 공원 3지표·GRDP 5지표·사교육비 5지표·자동차 4용도·출생성비 6순위·사업체 2지표×19산업. 방향: snapshot=지표 1개, dataset=지표 셀렉터(KMA metric 선행 사례), metadata에 지표→snapshot 매핑. 지도 크기는 export 캡처에도 반영됨
+- 검증: typecheck/test(94)/build 통과
+- 브라우저/API: 렌더 미확인. KOSIS metadata 실측만 수행
+- 차단/주의: 없음
+- 다음 작업: 지표별 snapshot 적재 + 셀렉터 연결
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — API 전수 가용성 Audit
+
+- 결과: 완료 (코드 변경 없음)
+- 변경: 없음 (read-only 실측)
+- 결정/데이터: 7개가 전부가 아님. 실측 통과(미연결): 에어코리아(https 00)·TourAPI(0000/2032건)·EV충전소(00)·단기예보(00/980건)·SGIS 지오코딩(0/Success)·WorldBank·USGS·Open-Meteo·OpenTopoData·GBIF(887만건)·Nominatim. SGIS 센서스는 auth 통과이나 KOSIS와 중복이라 역할 분리상 미사용. 도로명주소는 키 미발급으로 불가. NGII는 미활성 대기
+- 검증: 각 API HTTP 실측. 키·원문 비밀값 기록 없음
+- 차단/주의: 없음
+- 다음 작업: 에어코리아 snapshot (PM10/PM2.5 탈락분 대체) → TourAPI/EV POI → 단기예보
+- 커밋: 미커밋 로컬 변경 (문서만)
+
+### 2026-09-17 — OpenCode — PHASE-C 지표·산업 셀렉터
+
+- 결과: 완료
+- 변경: 지표 snapshot 21건 공개 적재(총 27개·17,820행), `src/lib/dataset-catalog.ts`(indicators), `src/lib/kosis-dimensions.ts`(신규·산업 19종), `src/lib/geo-observations.ts`(분류 필터), `src/pages/CreatePage.tsx`(지표·산업 셀렉터), `scripts/kosis-snapshot.mjs`(label 지역명), `dataset_catalog` 6행 indicators 등록, 테스트 6개 추가
+- 결정/데이터: snapshot=지표 1개, dataset=지표 셀렉터(KMA metric 선행 사례). 산업 선택지는 ind-T1/ind-T2에만 표시. PM10/PM2.5 제외 유지
+- 검증: typecheck/test(100)/build 통과. 27 snapshot 전수·indicators 연결·실측 조인 통과
+- 브라우저/API: KOSIS API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: 배포 후 지표·산업·연도 전환 렌더 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

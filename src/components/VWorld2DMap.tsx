@@ -25,6 +25,14 @@ import type { SgisBoundaryResponse } from "../lib/sgis";
 
 type MapStatus = "idle" | "loading" | "ready" | "error";
 
+type MapFrameSize = "standard" | "large" | "xlarge";
+
+const MAP_FRAME_SIZES: Array<{ key: MapFrameSize; label: string; minHeight: number }> = [
+  { key: "standard", label: "기본", minHeight: 432 },
+  { key: "large", label: "크게", minHeight: 600 },
+  { key: "xlarge", label: "더 크게", minHeight: 780 },
+];
+
 const TILE_LAYER_ERROR_MESSAGE = "밝은 회색지도를 표시하지 못했습니다. VWorld 배경으로 되돌려 사용하세요.";
 
 export function VWorld2DMap({
@@ -57,6 +65,7 @@ export function VWorld2DMap({
   const [tileLayerError, setTileLayerError] = useState<string | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [basemapType, setBasemapType] = useState<VWorldBasemapKey>("GRAPHIC_WHITE");
+  const [mapFrameSize, setMapFrameSize] = useState<MapFrameSize>("standard");
   const basemapTypeRef = useRef<VWorldBasemapKey>("GRAPHIC_WHITE");
 
   const displayStations = useMemo(
@@ -137,6 +146,10 @@ export function VWorld2DMap({
     );
   }, [basemapType]);
 
+  useEffect(() => {
+    mapRef.current?.map.updateSize();
+  }, [mapFrameSize]);
+
   const thematicSummary = useMemo(() => {
     const entries = Object.values(boundaryValues ?? {});
     if (!entries.length) return null;
@@ -165,7 +178,10 @@ export function VWorld2DMap({
 
   return (
     <div className="vworld-map-workspace">
-      <div className="vworld-map-frame">
+      <div
+        className="vworld-map-frame"
+        style={{ minHeight: MAP_FRAME_SIZES.find((size) => size.key === mapFrameSize)?.minHeight ?? 432 }}
+      >
         <div
           id={mapId}
           ref={mapElementRef}
@@ -199,6 +215,20 @@ export function VWorld2DMap({
             {VWORLD_BASEMAP_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
           </select>
           <small>{basemapOption.description}</small>
+          <div className="vworld-map-size" role="group" aria-label="지도 출력 크기">
+            <span>지도 크기</span>
+            {MAP_FRAME_SIZES.map((size) => (
+              <button
+                key={size.key}
+                type="button"
+                className={mapFrameSize === size.key ? "is-active" : ""}
+                aria-pressed={mapFrameSize === size.key}
+                onClick={() => setMapFrameSize(size.key)}
+              >
+                {size.label}
+              </button>
+            ))}
+          </div>
           {tileLayerError && <small className="field-help field-help--error" role="alert">{tileLayerError}</small>}
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}

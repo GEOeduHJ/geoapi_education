@@ -431,6 +431,16 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | PHASE-B2: 4종 적재·연평균 집계·ready 7개 | `88c9f20` | typecheck/test(92)/build 통과, 실측 조인 4건 통과 |
 | 2026-09-17 | OpenCode | QUERY-UX: 조건·시각화 섹션 분리, 연도 선택 상단화 | `bb362be` | typecheck/test(92)/build 통과, dev 서버 200 확인 |
 | 2026-09-17 | OpenCode | ESRI-BASEMAP: NGII 원복 후 밝은 회색지도 옵션 (브라우저 확인 대기) | `fb3314a` | typecheck/test(94)/build 통과, dev 서버 200 확인 |
+### PHASE-C — 지표·산업 셀렉터 (완료, 2026-09-17)
+
+**배경 (사용자 지적):** 사업체 분류·공원 세부 항목 같은 하위 옵션이 없었다.
+
+**완료 내용:** 지표 snapshot 21건 추가 적재·공개(총 27개·17,820행). `DatasetIndicator` + 카탈로그 metadata 연결로 dataset별 지표 셀렉터, 사업체 19산업 선택지(`kosis-dimensions.ts` + 분류 필터) 추가. ingest label을 지역명으로 보정. PM10/PM2.5는 API 빈 응답으로 제외(에어코리아로 이관).
+
+**검증:** typecheck/test(100)/build 통과. 27개 snapshot 전수·27개 indicators 연결 확인. 실측 조인: 제조업 2024 17/17 포함 통과.
+
+| 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과 |
+| 2026-09-17 | OpenCode | PHASE-C: 21개 지표 적재·지표/산업 셀렉터 | 미커밋 로컬 변경 | typecheck/test(100)/build 통과, 전수 실측 통과 |
 | 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위

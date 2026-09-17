@@ -54,4 +54,12 @@ describe("KOSIS snapshot ingest helpers", () => {
     expect(buildSnapshotChecksum(query, [{ a: 1 }], [{ b: 2 }])).toBe(first);
     expect(buildSnapshotChecksum(query, [{ a: 2 }], [{ b: 2 }])).not.toBe(first);
   });
+
+  it("labels multi-classification rows with the region name only", () => {
+    const payload = parseProviderText('[{ORG_ID:"101",TBL_ID:"DT_1K52F01",C1:"11",C1_NM:"서울",C1_OBJ_NM:"행정구역별",C2:"C",C2_NM:"제조업",C2_OBJ_NM:"산업별",ITM_ID:"T1",ITM_NM:"사업체수",PRD_SE:"Y",PRD_DE:"2024",DT:"100"}]');
+    const observations = normalizeKosisRecords(parseKosisRecords(payload));
+    expect(observations[0].region_code).toBe("11");
+    expect(observations[0].label).toBe("서울");
+    expect(observations[0].category).toBe("사업체수");
+  });
 });

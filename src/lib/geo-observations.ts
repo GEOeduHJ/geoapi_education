@@ -237,6 +237,32 @@ export function filterObservationsByYear(
   return observations.filter((observation) => observation.observed_at?.slice(0, 4) === year);
 }
 
+function classificationCode(observation: PublicGeoObservation, level: number): string | null {
+  const classifications = observation.attributes.classifications;
+  if (!Array.isArray(classifications)) return null;
+  for (const entry of classifications) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    if (record["level"] === level && typeof record["code"] === "string") {
+      return record["code"] as string;
+    }
+  }
+  return null;
+}
+
+/**
+ * Phase C 하위분류 필터 (예: 사업체 산업 대분류). 빈 코드는 전체로 취급한다.
+ * KOSIS metadata의 분류 코드를 그대로 비교하며 이름 추정을 하지 않는다.
+ */
+export function filterObservationsByClassification(
+  observations: PublicGeoObservation[],
+  level: number,
+  code: string,
+): PublicGeoObservation[] {
+  if (!code.trim()) return observations;
+  return observations.filter((observation) => classificationCode(observation, level) === code);
+}
+
 /**
  * 연도 필터 뒤에 남은 복수 시점 행(월별 등)을 지역별 연평균 하나로 합친다.
  * 이미 지역당 1행이면 입력을 그대로 반환해 연간 표의 동작을 바꾸지 않는다.

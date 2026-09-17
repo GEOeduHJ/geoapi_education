@@ -9,9 +9,10 @@ import { Kosis2DWorkspace } from "../components/Kosis2DWorkspace";
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
-import { useDatasetCatalog, type DatasetScope } from "../lib/dataset-catalog";
+import { useDatasetCatalog, getDatasetIndicators, type DatasetScope } from "../lib/dataset-catalog";
+import { getKosisDimensions } from "../lib/kosis-dimensions";
 import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
-import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByYear, listObservationYears, type PublicKosisDataset } from "../lib/geo-observations";
+import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { KOSIS_SGG_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
 import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
@@ -113,16 +114,28 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
   const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
   const [kosisYear, setKosisYear] = useState("");
+  const [indicatorKey, setIndicatorKey] = useState("");
+  const [dimSelections, setDimSelections] = useState<Record<string, string>>({});
   const mapExportRef = useRef<HTMLDivElement | null>(null);
   const datasets = useDatasetCatalog(scope);
   const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
   const isKma = datasetKey === "kma-asos-climate-10y";
   const isKosisDataset = isDomestic && !isThreeD && dataset?.provider === "KOSIS";
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
+  const kosisIndicators = useMemo(() => (dataset ? getDatasetIndicators(dataset) : []), [dataset]);
+  const effectiveIndicator = kosisIndicators.find((entry) => entry.key === indicatorKey) ?? kosisIndicators[0] ?? null;
+  const indicatorSnapshotId = effectiveIndicator?.snapshotId ?? dataset?.snapshotId ?? null;
+  const kosisDimensions = useMemo(
+    () => getKosisDimensions(datasetKey, effectiveIndicator?.key ?? ""),
+    [datasetKey, effectiveIndicator],
+  );
 
   useEffect(() => {
     setDatasetKey(isDomestic ? "kma-asos-climate-10y" : "world-bank-population-density");
     setBoundaryCode("");
+    setKosisYear("");
+    setIndicatorKey("");
+    setDimSelections({});
   }, [isDomestic]);
 
   useEffect(() => {
@@ -154,8 +167,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       setSgisBoundaryError(boundaryResult.error);
       setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
       if (!isKosisDataset) return;
-      const kosisResult = dataset?.snapshotId
-        ? await fetchPublicKosisDataset(dataset.snapshotId)
+      const kosisResult = indicatorSnapshotId
+        ? await fetchPublicKosisDataset(indicatorSnapshotId)
         : await fetchLatestPublicKosisDataset();
       if (cancelled) return;
       setKosisDataset(kosisResult);
@@ -171,7 +184,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       }
     });
     return () => { cancelled = true; };
-  }, [isDomestic, isKosisDataset, isThreeD, dataset?.snapshotId]);
+  }, [isDomestic, isKosisDataset, isThreeD, indicatorSnapshotId]);
 
   const visibleBoundaries = useMemo<SgisBoundaryResponse | null>(() => {
     if (!sgisBoundaries || !boundaryCode) return sgisBoundaries;
@@ -184,14 +197,22 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     };
   }, [boundaryCode, sgisBoundaries]);
 
+  const dimFilteredKosisObservations = useMemo(() => {
+    let rows = kosisDataset.observations;
+    for (const dimension of kosisDimensions) {
+      rows = filterObservationsByClassification(rows, dimension.level, dimSelections[dimension.key] ?? "");
+    }
+    return rows;
+  }, [kosisDataset.observations, kosisDimensions, dimSelections]);
+
   const availableKosisYears = useMemo(
-    () => listObservationYears(kosisDataset.observations),
-    [kosisDataset.observations],
+    () => listObservationYears(dimFilteredKosisObservations),
+    [dimFilteredKosisObservations],
   );
   const effectiveKosisYear = availableKosisYears.includes(kosisYear) ? kosisYear : (availableKosisYears[0] ?? "");
   const yearFilteredKosisObservations = useMemo(
-    () => aggregateObservationsByRegion(effectiveKosisYear ? filterObservationsByYear(kosisDataset.observations, effectiveKosisYear) : kosisDataset.observations),
-    [kosisDataset.observations, effectiveKosisYear],
+    () => aggregateObservationsByRegion(effectiveKosisYear ? filterObservationsByYear(dimFilteredKosisObservations, effectiveKosisYear) : dimFilteredKosisObservations),
+    [dimFilteredKosisObservations, effectiveKosisYear],
   );
 
   const boundaryJoin = useMemo(
@@ -304,7 +325,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
           <div className="sidebar-section">
             <p className="eyebrow">01 · QUERY</p>
             <h3>{scope === "domestic" ? "자료·조건 선택" : "세계 자료 선택"}</h3>
-            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); }} />
+            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); setIndicatorKey(""); setDimSelections({}); }} />
             {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
             {!isThreeD && isDomestic && isKma && (
               <>
@@ -319,6 +340,27 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             )}
             {isKosisDataset && (
               <>
+                {kosisIndicators.length > 1 && (
+                  <>
+                    <label className="field-label" htmlFor="kosis-indicator">지표</label>
+                    <select id="kosis-indicator" value={effectiveIndicator?.key ?? ""} onChange={(event) => { setIndicatorKey(event.target.value); setKosisYear(""); setDimSelections({}); }}>
+                      {kosisIndicators.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}{entry.unit ? ` (${entry.unit})` : ""}</option>)}
+                    </select>
+                  </>
+                )}
+                {kosisDimensions.map((dimension) => (
+                  <span key={dimension.key}>
+                    <label className="field-label" htmlFor={`kosis-dim-${dimension.key}`}>{dimension.label}</label>
+                    <select
+                      id={`kosis-dim-${dimension.key}`}
+                      value={dimSelections[dimension.key] ?? ""}
+                      onChange={(event) => setDimSelections((prev) => ({ ...prev, [dimension.key]: event.target.value }))}
+                    >
+                      <option value="">전체 {dimension.label}</option>
+                      {dimension.options.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+                    </select>
+                  </span>
+                ))}
                 <label className="field-label" htmlFor="kosis-year">연도</label>
                 <select id="kosis-year" value={effectiveKosisYear} onChange={(event) => setKosisYear(event.target.value)} disabled={availableKosisYears.length === 0}>
                   {availableKosisYears.length === 0
@@ -361,7 +403,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
-      {isKosisDataset && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
+      {isKosisDataset && <Kosis2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

@@ -384,7 +384,9 @@ export function normalizeKosisRecords(records) {
       external_id: externalId.slice(0, 500),
       observed_at: periodStart(record.periodType, record.period),
       region_code: region?.code ?? null,
-      label: classificationLabel,
+      // label은 지도·그래프의 지역명으로 쓰이므로 지역 분류명만 넣는다.
+      // 전체 분류 경로는 attributes.classifications에 보존된다.
+      label: region?.name ?? classificationLabel,
       value: record.value,
       unit: record.unitName,
       category: record.itemName,

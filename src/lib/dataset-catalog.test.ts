@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DATASET_CATALOG, getDatasets, getDataset, mapDatasetCatalogRow, mergeDatasetCatalog, supportsBoundaryLevel } from "./dataset-catalog";
+import { DATASET_CATALOG, getDatasets, getDataset, getDatasetIndicators, mapDatasetCatalogRow, mergeDatasetCatalog, supportsBoundaryLevel } from "./dataset-catalog";
 import { DEFAULT_CLIMATE_FROM, DEFAULT_CLIMATE_TO } from "../components/Climate2DWorkspace";
 
 describe("curated dataset catalog", () => {
@@ -112,6 +112,30 @@ describe("mapDatasetCatalogRow", () => {
     expect(mapDatasetCatalogRow(baseRow)?.snapshotId).toBeNull();
     expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "snap-1" })?.snapshotId).toBe("snap-1");
     expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "  " })?.snapshotId).toBeNull();
+  });
+
+  it("parses indicator lists from catalog metadata and falls back to single", () => {
+    const withIndicators = mapDatasetCatalogRow({
+      ...baseRow,
+      scope: "domestic",
+      metadata: {
+        indicators: [
+          { key: "T1", label: "지표 1", snapshotId: "snap-1", unit: "개" },
+          { key: "", label: "broken" },
+          { key: "T2", label: "지표 2", snapshotId: "  ", unit: 42 },
+        ],
+      },
+    });
+    expect(withIndicators?.indicators).toEqual([
+      { key: "T1", label: "지표 1", snapshotId: "snap-1", unit: "개" },
+      { key: "T2", label: "지표 2", snapshotId: null, unit: "" },
+    ]);
+    expect(getDatasetIndicators(withIndicators!)).toHaveLength(2);
+
+    const single = mapDatasetCatalogRow(baseRow)!;
+    expect(getDatasetIndicators(single)).toEqual([
+      { key: "default", label: single.title, snapshotId: null, unit: "" },
+    ]);
   });
 
   it("leaves static entries unlinked so they read the latest public snapshot", () => {
