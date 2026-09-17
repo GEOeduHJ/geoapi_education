@@ -8,8 +8,12 @@ import { hasVWorldClientConfig, resolveVWorldDomain } from "../lib/env";
 import {
   createVWorld2DMap,
   disposeVWorld2DMap,
+  getVWorldBasemapOption,
   loadVWorld2D,
+  setVWorld2DBasemap,
   updateVWorld2DBoundaryLayer,
+  VWORLD_BASEMAP_OPTIONS,
+  type VWorldBasemapKey,
   type VWorld2DRuntime,
 } from "../lib/vworld2d";
 import type { BoundaryJoinValue } from "../lib/geo-join";
@@ -36,6 +40,8 @@ export function VWorld2DMap({
   const [mapStatus, setMapStatus] = useState<MapStatus>("idle");
   const [mapError, setMapError] = useState<string | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [basemapType, setBasemapType] = useState<VWorldBasemapKey>("GRAPHIC_WHITE");
+  const basemapTypeRef = useRef<VWorldBasemapKey>("GRAPHIC_WHITE");
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +73,7 @@ export function VWorld2DMap({
 
     loadVWorld2D().then((runtime) => {
       if (cancelled || !mapElementRef.current) return;
-      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId);
+      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId, basemapTypeRef.current);
       mapRef.current = { runtime, map };
       updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
       setMapStatus("ready");
@@ -86,6 +92,13 @@ export function VWorld2DMap({
     };
   }, [mapId, stationStatus, stations]);
 
+  useEffect(() => {
+    basemapTypeRef.current = basemapType;
+    const currentMap = mapRef.current;
+    if (!currentMap) return;
+    setVWorld2DBasemap(currentMap.runtime, currentMap.map, basemapType);
+  }, [basemapType]);
+
   const thematicSummary = useMemo(() => {
     const entries = Object.values(boundaryValues ?? {});
     if (!entries.length) return null;
@@ -99,6 +112,7 @@ export function VWorld2DMap({
     };
   }, [boundaryValues]);
   const selectedStation = stations.find((station) => station.station_id === selectedStationId);
+  const basemapOption = getVWorldBasemapOption(basemapType);
   const domain = resolveVWorldDomain();
   const fallbackMessage = !hasVWorldClientConfig
     ? "브라우저용 VWorld 키와 등록 domain을 설정하면 지도를 표시할 수 있습니다."
@@ -114,7 +128,7 @@ export function VWorld2DMap({
           ref={mapElementRef}
           className="vworld-map"
           role="application"
-          aria-label="VWorld 2D 지도와 KMA ASOS 관측소"
+          aria-label={`VWorld 2D 지도와 KMA ASOS 관측소 · ${basemapOption.label}`}
         />
         <div className="vworld-map-caption">
           <span>VWORLD 2D · KMA ASOS</span>
@@ -126,7 +140,19 @@ export function VWorld2DMap({
           <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>
           {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? " · KOSIS 값" : ""}</span>}
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
-          <span>배경: VWorld Graphic</span>
+          <span>배경: {basemapOption.label}</span>
+        </div>
+        <div className="vworld-map-basemap-control">
+          <label htmlFor={`${mapId}-basemap`}>지도 배경</label>
+          <select
+            id={`${mapId}-basemap`}
+            aria-label="지도 배경 유형"
+            value={basemapType}
+            onChange={(event) => setBasemapType(event.target.value as VWorldBasemapKey)}
+          >
+            {VWORLD_BASEMAP_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+          </select>
+          <small>{basemapOption.description}</small>
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}
         {mapStatus === "error" && <div className="vworld-map-message vworld-map-message--error" role="alert"><strong>지도를 불러오지 못했습니다.</strong><span>{fallbackMessage ?? mapError ?? "VWorld 등록 domain과 브라우저 키를 확인하세요."}</span><small>현재 domain: {domain || "미설정"}</small></div>}

@@ -181,7 +181,7 @@ type MapMaterial = {
 };
 
 type Map2DConfig = {
-  basemap: "vworld" | "fallback";
+  basemap: "graphic-white" | "graphic" | "graphic-night" | "photo" | "photo-hybrid" | "fallback";
   layers: Array<"polygon" | "point" | "line" | "flow" | "raster">;
   classification?: "quantile" | "equal-interval" | "natural-breaks" | "categorical";
   legend: boolean;
@@ -198,6 +198,8 @@ type Map3DConfig = {
   lighting?: boolean;
 };
 ```
+
+현재 2D 제작기에서는 `GRAPHIC_WHITE`를 백지도의 기본값으로 사용하고, VWorld 공식 2D 배경 타입인 `GRAPHIC`, `GRAPHIC_NIGHT`, `PHOTO`, `PHOTO_HYBRID`를 선택할 수 있다. 배경을 바꾸어도 KMA 관측소·SGIS 경계·KOSIS 주제 레이어는 같은 지도 인스턴스에 남긴다. 사용자가 말하는 지형·고도 표현은 2D 배경을 지형도로 오인하지 않도록 `/create/3d`의 WebGL/Cesium 경로에서 별도로 구현한다.
 
 ### 5.3 2D 지도에서 우선 제공할 학습 패턴
 

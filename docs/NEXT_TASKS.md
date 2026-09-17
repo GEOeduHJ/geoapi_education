@@ -56,7 +56,7 @@ Vercel 배포 후 다음 두 값을 확정한다.
 | 2 | KMA 관측소·ASOS 일자료 수집 계약 | 승인된 API, 대표 도시 목록 | station metadata와 daily snapshot fixture/schema 통과 |
 | 3 | KMA 최근 10년 백필 | 작은 샘플 성공, `0003` 적용 | 10개 도시·36,530행 백필 및 `0004` 월별 요약 조회 완료 |
 | 4 | KOSIS 첫 통계표 adapter | 표 ID와 코드 확정 | **검색·메타데이터·제한 조회·controlled snapshot CLI·공개 snapshot 읽기 UI·단일 분류 요청 구현**; SGIS 직접 결합이 가능한 첫 표와 실제 적재 대기 |
-| 5 | 2D 지도 제작기 | 1~4번의 snapshot + SGIS/VWorld 경계 | **KMA 관측소 위치 레이어·KOSIS 공개값 준비 패널·SGIS 경계 확인 패널·정확한 코드 조인 진단·조건부 단계구분도·값 결합 없는 기준 면 레이어 완료**; 검증된 단일 기간·단위 snapshot으로 실제 색상·범례를 검증한 뒤 범례 편집·출처·분류 설정 확장 |
+| 5 | 2D 지도 제작기 | 1~4번의 snapshot + SGIS/VWorld 경계 | **KMA 관측소 위치 레이어·KOSIS 공개값 준비 패널·SGIS 경계 확인 패널·정확한 코드 조인 진단·조건부 단계구분도·값 결합 없는 기준 면 레이어·백지도/기본도/야간/항공 배경 선택 완료**; 검증된 단일 기간·단위 snapshot으로 실제 색상·범례를 검증한 뒤 범례 편집·출처·분류 설정 확장 |
 | 6 | 자료 활용 탐구 활동 | 5번의 material | 관찰·증거 선택·주장·근거·제한점 입력과 재생 가능 |
 | 7 | 3D 지형·입체 통계 | 5번의 공통 data contract | 3D 장면과 2D/표 fallback, 고도·배율·출처 표시 |
 | 8 | 배포·운영 QA | Vercel hostname, secrets | CI, API failure fallback, 모바일·접근성·키 노출 검사 |

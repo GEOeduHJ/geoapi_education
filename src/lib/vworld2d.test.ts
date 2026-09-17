@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { epsg5179ToWebMercator, extractVWorldScriptUrls, getChoroplethColor, transformNestedCoordinates } from "./vworld2d";
+import {
+  epsg5179ToWebMercator,
+  extractVWorldScriptUrls,
+  getChoroplethColor,
+  transformNestedCoordinates,
+  VWORLD_BASEMAP_OPTIONS,
+} from "./vworld2d";
 
 describe("VWorld 2D loader helpers", () => {
   it("extracts document.write script URLs without interpreting the markup", () => {
@@ -35,5 +41,16 @@ describe("VWorld 2D loader helpers", () => {
     expect(getChoroplethColor(0, 0, 100)).toBe(getChoroplethColor(-20, 0, 100));
     expect(getChoroplethColor(100, 0, 100)).toBe(getChoroplethColor(120, 0, 100));
     expect(getChoroplethColor(50, 50, 50)).toContain("rgba");
+  });
+
+  it("offers a low-clutter white basemap before reference and imagery options", () => {
+    expect(VWORLD_BASEMAP_OPTIONS.map((option) => option.key)).toEqual([
+      "GRAPHIC_WHITE",
+      "GRAPHIC",
+      "GRAPHIC_NIGHT",
+      "PHOTO",
+      "PHOTO_HYBRID",
+    ]);
+    expect(VWORLD_BASEMAP_OPTIONS[0].label).toBe("백지도");
   });
 });

@@ -37,6 +37,7 @@ interface VWorldMap {
     callback: (feature: VWorldFeature) => VWorldFeature | false,
   ): VWorldFeature | false;
   on(event: string, listener: (event: VWorldMapEvent) => void): void;
+  setBasemapType?(basemapType: string): void;
   setTarget(target: string | HTMLElement | null): void;
   updateSize(): void;
   dispose?(): void;
@@ -67,7 +68,14 @@ interface OpenLayersNamespace {
 }
 
 interface VWorldOl3Namespace {
-  BasemapType: { GRAPHIC: string };
+  BasemapType: {
+    GRAPHIC: string;
+    GRAPHIC_WHITE?: string;
+    GRAPHIC_NIGHT?: string;
+    PHOTO?: string;
+    PHOTO_HYBRID?: string;
+    [key: string]: string | undefined;
+  };
   DensityType: { BASIC: string };
   Map: new (container: string, options: Record<string, unknown>) => VWorldMap;
   CameraPosition: Record<string, unknown>;
@@ -81,6 +89,41 @@ interface VWorldNamespace {
 export interface VWorld2DRuntime {
   ol: OpenLayersNamespace;
   vw: VWorldNamespace;
+}
+
+/** Official VWorld 2D basemap choices exposed by the map runtime. */
+export const VWORLD_BASEMAP_OPTIONS = [
+  {
+    key: "GRAPHIC_WHITE",
+    label: "백지도",
+    description: "색상과 도로 정보를 최소화해 주제 레이어를 읽기 쉬운 배경",
+  },
+  {
+    key: "GRAPHIC",
+    label: "기본도(도로)",
+    description: "도로·지명 중심의 일반 참조 배경",
+  },
+  {
+    key: "GRAPHIC_NIGHT",
+    label: "야간지도",
+    description: "어두운 배경에서 밝은 주제 레이어를 비교하는 배경",
+  },
+  {
+    key: "PHOTO",
+    label: "항공사진",
+    description: "항공 영상 위에 관측소와 경계를 겹쳐 보는 배경",
+  },
+  {
+    key: "PHOTO_HYBRID",
+    label: "항공사진+표시",
+    description: "항공 영상과 주요 지명·도로 표시를 함께 제공하는 배경",
+  },
+] as const;
+
+export type VWorldBasemapKey = typeof VWORLD_BASEMAP_OPTIONS[number]["key"];
+
+export function getVWorldBasemapOption(key: VWorldBasemapKey) {
+  return VWORLD_BASEMAP_OPTIONS.find((option) => option.key === key) ?? VWORLD_BASEMAP_OPTIONS[0];
 }
 
 declare global {
@@ -335,6 +378,25 @@ function createBoundaryLayer(
   return boundaryLayer;
 }
 
+function resolveVWorldBasemapType(runtime: VWorld2DRuntime, key: VWorldBasemapKey): string {
+  return runtime.vw.ol3.BasemapType[key] ?? runtime.vw.ol3.BasemapType.GRAPHIC;
+}
+
+/** Changes only the VWorld background while preserving user-added vector layers. */
+export function setVWorld2DBasemap(
+  runtime: VWorld2DRuntime,
+  map: VWorldMap,
+  key: VWorldBasemapKey,
+): boolean {
+  if (typeof map.setBasemapType !== "function") return false;
+  try {
+    map.setBasemapType(resolveVWorldBasemapType(runtime, key));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Adds or replaces the SGIS reference/thematic layer without reinitializing VWorld. */
 export function updateVWorld2DBoundaryLayer(
   runtime: VWorld2DRuntime,
@@ -360,11 +422,12 @@ export function createVWorld2DMap(
   containerId: string,
   stations: ClimateStation[],
   onSelectStation: (stationId: string | null) => void,
+  basemapType: VWorldBasemapKey = "GRAPHIC_WHITE",
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
   const map = new runtime.vw.ol3.Map(containerId, {
-    basemapType: runtime.vw.ol3.BasemapType.GRAPHIC,
+    basemapType: resolveVWorldBasemapType(runtime, basemapType),
     controlDensity: runtime.vw.ol3.DensityType.BASIC,
     interactionDensity: runtime.vw.ol3.DensityType.BASIC,
     controlsAutoArrange: true,
