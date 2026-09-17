@@ -357,6 +357,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `182f94d fix: force https for 3D engine scripts`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01e 단계별 진단 에러
+
+- 결과: 부분 완료 (진단용 배포)
+- 변경: `src/lib/vworld3d.ts`(생성·위치·시작·viewer 단계별 에러), `src/components/VWorld3DMap.tsx`
+- 결정/데이터: 엔진 JS에서 `ws3d`·`CameraPosition`·`viewer/entities` 존재를 확인했으나 막힌 지점이 불명확해 단계별 메시지로 좁힌다. 다음 스크린샷의 정확한 문구가 다음 수정의 입력이다
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 미확인
+- 차단/주의: 없음
+- 다음 작업: Production 에러 문구 확인 후 해당 단계 수정
+- 커밋: `f1b090e fix: granular 3D init diagnostics`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
