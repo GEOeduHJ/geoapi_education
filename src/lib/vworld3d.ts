@@ -254,8 +254,9 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
   }
   try {
     map.start?.();
-  } catch {
-    throw new Error("지도 시작(start)에 실패했습니다.");
+  } catch (failure) {
+    const reason = failure instanceof Error && failure.message ? `: ${failure.message}` : "";
+    throw new Error(`지도 시작(start)에 실패했습니다${reason.slice(0, 200)}`);
   }
   // start() 뒤 viewer가 비동기로 붙으므로 폴링으로 기다린다.
   const viewer = await waitForViewer();
