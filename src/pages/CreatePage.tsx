@@ -10,7 +10,7 @@ import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinSta
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
 import { useDatasetCatalog, type DatasetScope } from "../lib/dataset-catalog";
-import { lawCodeToSgisAdmCds, type ClimateMetric } from "../lib/climate";
+import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
 import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByYear, listObservationYears, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { KOSIS_SGG_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
@@ -302,46 +302,66 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         )}
         <aside className="workspace-sidebar">
           <div className="sidebar-section">
-            <p className="eyebrow">01 · DATASET</p>
-            <h3>{scope === "domestic" ? "국내 자료 선택" : "세계 자료 선택"}</h3>
+            <p className="eyebrow">01 · QUERY</p>
+            <h3>{scope === "domestic" ? "자료·조건 선택" : "세계 자료 선택"}</h3>
             <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); }} />
             {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
+            {!isThreeD && isDomestic && isKma && (
+              <>
+                <label className="field-label" htmlFor="kma-metric">지표</label>
+                <select id="kma-metric" value={metric} onChange={(event) => setMetric(event.target.value as ClimateMetric)}>{Object.entries(climateMetrics).map(([key, definition]) => <option key={key} value={key}>{definition.label} ({definition.unit})</option>)}</select>
+                <label className="field-label" htmlFor="kma-from">시작일</label>
+                <input id="kma-from" type="date" min={DEFAULT_CLIMATE_FROM} max={DEFAULT_CLIMATE_TO} value={from} onChange={(event) => setFrom(event.target.value)} />
+                <label className="field-label" htmlFor="kma-to">종료일</label>
+                <input id="kma-to" type="date" min={DEFAULT_CLIMATE_FROM} max={DEFAULT_CLIMATE_TO} value={to} onChange={(event) => setTo(event.target.value)} />
+                <small className="field-help">지표·기간 조건이 지도·그래프·자료표에 함께 적용됩니다.</small>
+              </>
+            )}
+            {isKosisDataset && (
+              <>
+                <label className="field-label" htmlFor="kosis-year">연도</label>
+                <select id="kosis-year" value={effectiveKosisYear} onChange={(event) => setKosisYear(event.target.value)} disabled={availableKosisYears.length === 0}>
+                  {availableKosisYears.length === 0
+                    ? <option value="">연도 불러오는 중…</option>
+                    : availableKosisYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+                <small className="field-help">선택한 연도의 값으로 지도·그래프·자료표가 함께 갱신됩니다.</small>
+              </>
+            )}
+            {!isThreeD && isDomestic && (
+              <>
+                <label className="field-label" htmlFor="boundary-filter">지도에 표시할 시도</label>
+                <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
+                  <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
+                  {boundaryOptions.map((feature) => <option key={feature.properties.adm_cd ?? feature.properties.adm_nm} value={feature.properties.adm_cd ?? ""}>{feature.properties.adm_nm ?? feature.properties.adm_cd ?? "이름 없음"}</option>)}
+                </select>
+                <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 시도를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
+                <small className="field-help">국내 2D는 시도 단위로 고정합니다. 시군구·행정동은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않습니다.</small>
+                {sgisBoundaryStatus === "loading" && <small className="field-help">SGIS 경계 목록을 불러오는 중입니다…</small>}
+                {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
+              </>
+            )}
             {!isThreeD && isKosisDataset && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
             {!isThreeD && isKosisDataset && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
             {!isThreeD && isKosisDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
           </div>
-          {!isThreeD && isDomestic && (
-            <div className="sidebar-section">
-              <p className="eyebrow">02 · GEOGRAPHY FILTER</p>
-              <h3>시도 경계 범위</h3>
-              <label className="field-label" htmlFor="boundary-filter">지도에 표시할 시도</label>
-              <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
-                <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
-                {boundaryOptions.map((feature) => <option key={feature.properties.adm_cd ?? feature.properties.adm_nm} value={feature.properties.adm_cd ?? ""}>{feature.properties.adm_nm ?? feature.properties.adm_cd ?? "이름 없음"}</option>)}
-              </select>
-              <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 시도를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
-              <small className="field-help">국내 2D는 시도 단위로 고정합니다. 시군구·행정동은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않습니다.</small>
-              {sgisBoundaryStatus === "loading" && <small className="field-help">SGIS 경계 목록을 불러오는 중입니다…</small>}
-              {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
-            </div>
-          )}
           <div className="sidebar-section">
-            <p className="eyebrow">03 · REPRESENTATION</p>
+            <p className="eyebrow">02 · REPRESENTATION</p>
             <h3>표현 규칙</h3>
             <div className="control-row"><span>범례 자동 제안</span><button className="toggle is-on" type="button" aria-label="범례 자동 제안 켜짐"><i /></button></div>
             <div className="control-row"><span>학습자 조작 허용</span><button className="toggle is-on" type="button" aria-label="학습자 조작 허용 켜짐"><i /></button></div>
             <div className="control-row"><span>출처 패널 표시</span><button className="toggle is-on" type="button" aria-label="출처 패널 표시 켜짐"><i /></button></div>
           </div>
           <div className="sidebar-section sidebar-section--last">
-            <p className="eyebrow">04 · INQUIRY LINK</p>
+            <p className="eyebrow">03 · INQUIRY LINK</p>
             <h3>활동 연결</h3>
             <p className="muted-copy">자료 저장 후 관찰·비교·설명·일반화 질문을 연결할 수 있습니다.</p>
             <button className="button button-primary button-full" type="button">자료 저장 준비</button>
           </div>
         </aside>
       </section>
-      {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} onMetricChange={setMetric} onFromChange={setFrom} onToChange={setTo} state={climateViewState} />}
-      {isKosisDataset && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} availableYears={availableKosisYears} selectedYear={effectiveKosisYear} onYearChange={setKosisYear} exportSlug={datasetKey} />}
+      {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
+      {isKosisDataset && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

@@ -420,7 +420,16 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | KOSIS-VIZ: 그래프·표·provenance 연결, capabilities 복원 | `c695e54` | typecheck/test(85)/build 통과, dev 서버 200 확인 |
 | 2026-09-17 | OpenCode | PHASE-A: 다중 snapshot·연도 필터·catalog 연결 | `88c9f20` | typecheck/test(89)/build 통과 |
 | 2026-09-17 | OpenCode | PHASE-B1: GRDP 적재·dataset-keyed·카탈로그 2행 등록 | `88c9f20` | typecheck/test(89)/build 통과, 실측 조인 3건 통과 |
+### QUERY-UX — 조건 선택·시각화 섹션 분리 (완료, 2026-09-17)
+
+**배경 (사용자 지적):** 연도 선택이 그래프 섹션 안에 갇혀 지도가 연도 설정과 무관해 보였고, 조건과 시각화가 뒤섞여 있었다.
+
+**완료 내용:** 사이드바를 `01·QUERY(자료·지표/연도·시도경계)` + `02·REPRESENTATION` + `03·INQUIRY`로 재편. KMA 지표·기간과 KOSIS 연도 셀렉터를 QUERY 섹션으로 올리고(지도는 원래 같은 필터를 쓰고 있었으므로 동작 불변), 두 workspace의 중복 조건 컨트롤을 제거하고 그래프/표 토글만 남김. KOSIS 연도를 바꾸면 지도·그래프·표·CSV·provenance가 함께 갱신됨이 구조상 보장된다.
+
+**검증:** typecheck/test(92)/build 통과, dev 서버 200. 렌더 확인은 배포 후.
+
 | 2026-09-17 | OpenCode | PHASE-B2: 4종 적재·연평균 집계·ready 7개 | `88c9f20` | typecheck/test(92)/build 통과, 실측 조인 4건 통과 |
+| 2026-09-17 | OpenCode | QUERY-UX: 조건·시각화 섹션 분리, 연도 선택 상단화 | 미커밋 로컬 변경 | typecheck/test(92)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위
 

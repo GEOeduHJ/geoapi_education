@@ -26,9 +26,7 @@ export function Kosis2DWorkspace({
   joinResult,
   boundaryNames,
   error,
-  availableYears,
   selectedYear,
-  onYearChange,
   exportSlug,
 }: {
   datasetTitle: string;
@@ -38,9 +36,7 @@ export function Kosis2DWorkspace({
   joinResult: BoundaryJoinResult;
   boundaryNames: Record<string, string>;
   error: string | null;
-  availableYears: string[];
   selectedYear: string;
-  onYearChange: (year: string) => void;
   exportSlug: string;
 }) {
   const exportRef = useRef<HTMLElement | null>(null);
@@ -81,7 +77,6 @@ export function Kosis2DWorkspace({
       </div>
 
       <div className="climate-2d-controls" data-export-ignore="true" aria-label="2D 통계자료 보기 방식">
-        <label><span>연도</span><select value={selectedYear} onChange={(event) => onYearChange(event.target.value)} disabled={availableYears.length === 0}>{availableYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
         <label><span>보조 표현</span><select value={view} onChange={(event) => setView(event.target.value as "chart" | "table")}><option value="chart">그래프</option><option value="table">표</option></select></label>
       </div>
 

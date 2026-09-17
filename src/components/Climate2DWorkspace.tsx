@@ -157,17 +157,11 @@ export function Climate2DWorkspace({
   metric,
   from,
   to,
-  onMetricChange,
-  onFromChange,
-  onToChange,
   state,
 }: {
   metric: ClimateMetric;
   from: string;
   to: string;
-  onMetricChange: (metric: ClimateMetric) => void;
-  onFromChange: (from: string) => void;
-  onToChange: (to: string) => void;
   state: ClimateDatasetState;
 }) {
   const exportRef = useRef<HTMLElement | null>(null);
@@ -195,10 +189,7 @@ export function Climate2DWorkspace({
         <span className="climate-badge">{state.status === "ready" ? "공개 snapshot" : "DB 조회"}</span>
       </div>
 
-      <div className="climate-2d-controls" data-export-ignore="true" aria-label="2D 기후자료 조건">
-        <label><span>지표</span><select value={metric} onChange={(event) => onMetricChange(event.target.value as ClimateMetric)}>{Object.entries(climateMetrics).map(([key, definition]) => <option key={key} value={key}>{definition.label} ({definition.unit})</option>)}</select></label>
-        <label><span>시작일</span><input type="date" min={DEFAULT_CLIMATE_FROM} max={DEFAULT_CLIMATE_TO} value={from} onChange={(event) => onFromChange(event.target.value)} /></label>
-        <label><span>종료일</span><input type="date" min={DEFAULT_CLIMATE_FROM} max={DEFAULT_CLIMATE_TO} value={to} onChange={(event) => onToChange(event.target.value)} /></label>
+      <div className="climate-2d-controls" data-export-ignore="true" aria-label="2D 기후자료 보기 방식">
         <label><span>보조 표현</span><select value={view} onChange={(event) => setView(event.target.value as "chart" | "table")}><option value="chart">그래프</option><option value="table">표</option></select></label>
       </div>
 

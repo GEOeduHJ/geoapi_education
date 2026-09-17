@@ -193,6 +193,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 배포 후 7개 dataset 렌더 확인
 - 커밋: `88c9f20`에 포함
 
+### 2026-09-17 — OpenCode — QUERY-UX 조건·시각화 분리
+
+- 결과: 완료
+- 변경: `src/pages/CreatePage.tsx`(01 QUERY 섹션에 dataset·지표/기간·연도·시도경계 통합, 02/03 재번호), `src/components/Climate2DWorkspace.tsx`(조건 컨트롤 제거·보기 토글만), `src/components/Kosis2DWorkspace.tsx`(연도 셀렉터 제거·보기 토글만)
+- 결정/데이터: 지도·그래프·표가 원래 같은 조회 상태를 공유하고 있었으므로, 컨트롤 위치만 위로 옮기고 데이터 흐름은 불변. DB·API 변경 없음
+- 검증: typecheck/test(92)/build 통과, dev 서버 200
+- 브라우저/API: 렌더 미확인. 배포 후 연도 변경 시 지도·그래프·표 동반 갱신 확인 필요
+- 차단/주의: 없음
+- 다음 작업: 배포 후 렌더 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
