@@ -333,7 +333,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 렌더 미확인
 - 차단/주의: 없음
 - 다음 작업: Production `/create/3d` 재확인
-- 커밋: 미커밋 로컬 변경
+- 커밋: `c3865c9 fix: wait for dataset catalog before 3D snapshot resolution`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 

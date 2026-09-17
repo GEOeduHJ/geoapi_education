@@ -483,7 +483,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | 2D-04: 세계 국가경계·WB 인구밀도·world UI | `ebe173d` | typecheck/test(122)/build 통과, 실측 조인 통과 |
 | 2026-09-17 | OpenCode | WORLD-2: 지진·기후·고도·생태 4종 | `2b4afca` | typecheck/test(135)/build 통과, 실측 통과 |
 | 2026-09-17 | OpenCode | 3D-01: 프리즘 지도 첫 슬라이스 (렌더 미검증) | `6c57ba5` | typecheck/test(139)/build 통과, 로더 200 확인 |
-| 2026-09-18 | OpenCode | 3D-01b: 카탈로그 레이스 수정 (빈 목록 오판) | 미커밋 로컬 변경 | typecheck/test(139)/build 통과 |
+| 2026-09-18 | OpenCode | 3D-01b: 카탈로그 레이스 수정 (빈 목록 오판) | `c3865c9` | typecheck/test(139)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 
