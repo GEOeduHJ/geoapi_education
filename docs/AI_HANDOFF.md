@@ -373,10 +373,10 @@ git log --oneline -5
 | 2026-09-17 | Codex | Claude/OpenCode 교대 작업 규칙·현재 인계 문서·작업 로그 추가 | 미커밋 로컬 변경 | typecheck/test/build 통과 |
 | 2026-09-17 | Claude | `2D-01`: DB catalog repository(`useDatasetCatalog`) 추가, `0006` 운영 미적용을 read-only로 확정 | 미커밋 로컬 변경 | typecheck/test(60)/build 통과, 로컬 폴백 브라우저 확인 |
 | 2026-09-17 | Claude | `2D-02` 1단계-3단계: 공통 data-contract, KMA adapter, CSV export 구현 | 미커밋 로컬 변경 | typecheck/test/build 통과, UI 통합(4단계) 남음 |
-| 2026-09-17 | OpenCode | SIDO-LOCK: 시도 단위 고정 계약·카탈로그 지원수준·UI 문구 반영 | 미커밋 로컬 변경 | typecheck/test(75)/build 통과, dev 서버 200 확인 |
-| 2026-09-17 | OpenCode | 2D-03: DT_1YL21281 대응표 확정·DRY-RUN·crosswalk 연결 (적재 전) | 미커밋 로컬 변경 | typecheck/test(79)/build 통과, 0005 적용 확인 후 --write 대기 |
-| 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | 미커밋 로컬 변경 | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
-| 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | 미커밋 로컬 변경 | typecheck/test(81)/build 통과 |
+| 2026-09-17 | OpenCode | SIDO-LOCK: 시도 단위 고정 계약·카탈로그 지원수준·UI 문구 반영 | `12402f4` | typecheck/test(75)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | 2D-03: DT_1YL21281 대응표 확정·DRY-RUN·crosswalk 연결 (적재 전) | `12402f4` | typecheck/test(79)/build 통과, 0005 적용 확인 후 --write 대기 |
+| 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | `12402f4` | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
+| 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | `12402f4` | typecheck/test(81)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 

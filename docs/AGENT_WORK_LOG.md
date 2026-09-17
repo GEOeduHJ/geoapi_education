@@ -115,7 +115,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: KOSIS metadata·테이블 API 실측(HTTP 200, 22행·17행). 키·원문 비밀값 기록 없음. 브라우저 렌더 검증은 공개 적재 후 실시
 - 차단/주의: `--write --public`은 `0005` migration(SQL Editor 적용, unique index) 확인 전까지 실행하지 않음. 사용자가 적용 후 알리면 적재 명령(`docs/KOSIS_ADAPTER.md` 참조) 실행
 - 다음 작업: `0005` 적용 확인 → `--write --public` → 공개 snapshot·17개 경계값·조인 패널 브라우저 검증
-- 커밋: 미커밋 로컬 변경
+- 커밋: `12402f4 feat: sido-only boundary contract, KOSIS public snapshot and crosswalk join`에 포함
 
 ### 2026-09-17 — OpenCode — 2D-03 (적재·공개 완료)
 
@@ -126,7 +126,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: KOSIS metadata·테이블·SGIS 경계·Supabase REST 실측. 키·원문 비밀값 기록 없음. `/create/2d/domestic` 렌더 확인은 Production 배포 후 권장
 - 차단/주의: 없음
 - 다음 작업: `2D-04` — World Bank 세계 2D 수직 슬라이스. 또는 KOSIS dataset_catalog published 행 등록으로 DB override 경로 재검증(2D-01 잔여)
-- 커밋: 미커밋 로컬 변경
+- 커밋: `12402f4 feat: sido-only boundary contract, KOSIS public snapshot and crosswalk join`에 포함
 
 ### 2026-09-17 — OpenCode — 국내 Audit·KOSIS ready 전환·통합 커밋
 
@@ -137,7 +137,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 추가 API 호출 없음. KOSIS choropleth 렌더는 Production 배포 후 확인 필요
 - 차단/주의: 없음
 - 다음 작업: KOSIS 그래프·표·provenance 연결 (국내 완성 잔여)
-- 커밋: 미커밋 로컬 변경 → 아래 통합 커밋에 포함
+- 커밋: `12402f4 feat: sido-only boundary contract, KOSIS public snapshot and crosswalk join`에 포함
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
