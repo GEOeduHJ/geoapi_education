@@ -1,6 +1,7 @@
 import { hasSupabaseClientConfig } from "./env";
 
 export const KOSIS_SNAPSHOT_SCHEMA = "kosis-statistics-v1";
+export const AIRKOREA_SNAPSHOT_SCHEMA = "airkorea-sido-v1";
 export const MAX_PUBLIC_KOSIS_OBSERVATIONS = 2_000;
 
 export interface PublicSourceSnapshot {
@@ -98,14 +99,16 @@ export function normalizePublicObservation(value: unknown): PublicGeoObservation
   };
 }
 
-export async function fetchLatestPublicKosisSnapshot(): Promise<{ data: PublicSourceSnapshot | null; error: string | null }> {
+export async function fetchLatestPublicKosisSnapshot(
+  schema: string = KOSIS_SNAPSHOT_SCHEMA,
+): Promise<{ data: PublicSourceSnapshot | null; error: string | null }> {
   const supabase = await getSupabaseClient();
   if (!supabase) return { data: null, error: "SUPABASE_NOT_CONFIGURED" };
 
   const result = await supabase
     .from("source_snapshots")
     .select(SNAPSHOT_COLUMNS)
-    .eq("schema_version", KOSIS_SNAPSHOT_SCHEMA)
+    .eq("schema_version", schema)
     .eq("is_public", true)
     .order("fetched_at", { ascending: false })
     .limit(1)
@@ -121,6 +124,7 @@ export async function fetchLatestPublicKosisSnapshot(): Promise<{ data: PublicSo
 /** Phase A 다중화: 카탈로그 행이 가리키는 특정 공개 snapshot을 읽는다. */
 export async function fetchPublicKosisSnapshotById(
   snapshotId: string,
+  schema: string = KOSIS_SNAPSHOT_SCHEMA,
 ): Promise<{ data: PublicSourceSnapshot | null; error: string | null }> {
   const supabase = await getSupabaseClient();
   if (!supabase) return { data: null, error: "SUPABASE_NOT_CONFIGURED" };
@@ -130,7 +134,7 @@ export async function fetchPublicKosisSnapshotById(
     .from("source_snapshots")
     .select(SNAPSHOT_COLUMNS)
     .eq("id", snapshotId.trim())
-    .eq("schema_version", KOSIS_SNAPSHOT_SCHEMA)
+    .eq("schema_version", schema)
     .eq("is_public", true)
     .maybeSingle();
   if (result.error) return { data: null, error: result.error.message };
@@ -142,14 +146,16 @@ export async function fetchPublicKosisSnapshotById(
 }
 
 /** Phase A 다중화: 공개 KOSIS snapshot 목록 (최신순). 카탈로그·연도 선택의 재료다. */
-export async function fetchAllPublicKosisSnapshots(): Promise<{ data: PublicSourceSnapshot[]; error: string | null }> {
+export async function fetchAllPublicKosisSnapshots(
+  schema: string = KOSIS_SNAPSHOT_SCHEMA,
+): Promise<{ data: PublicSourceSnapshot[]; error: string | null }> {
   const supabase = await getSupabaseClient();
   if (!supabase) return { data: [], error: "SUPABASE_NOT_CONFIGURED" };
 
   const result = await supabase
     .from("source_snapshots")
     .select(SNAPSHOT_COLUMNS)
-    .eq("schema_version", KOSIS_SNAPSHOT_SCHEMA)
+    .eq("schema_version", schema)
     .eq("is_public", true)
     .order("fetched_at", { ascending: false });
   if (result.error) return { data: [], error: result.error.message };
@@ -184,8 +190,10 @@ export async function fetchPublicKosisObservations(
   };
 }
 
-export async function fetchLatestPublicKosisDataset(): Promise<PublicKosisDataset> {
-  const snapshotResult = await fetchLatestPublicKosisSnapshot();
+export async function fetchLatestPublicKosisDataset(
+  schema: string = KOSIS_SNAPSHOT_SCHEMA,
+): Promise<PublicKosisDataset> {
+  const snapshotResult = await fetchLatestPublicKosisSnapshot(schema);
   if (snapshotResult.error || !snapshotResult.data) {
     return { snapshot: snapshotResult.data, observations: [], truncated: false, error: snapshotResult.error };
   }
@@ -200,8 +208,11 @@ export async function fetchLatestPublicKosisDataset(): Promise<PublicKosisDatase
 }
 
 /** Phase A 다중화: 특정 공개 snapshot의 dataset을 읽는다. */
-export async function fetchPublicKosisDataset(snapshotId: string): Promise<PublicKosisDataset> {
-  const snapshotResult = await fetchPublicKosisSnapshotById(snapshotId);
+export async function fetchPublicKosisDataset(
+  snapshotId: string,
+  schema: string = KOSIS_SNAPSHOT_SCHEMA,
+): Promise<PublicKosisDataset> {
+  const snapshotResult = await fetchPublicKosisSnapshotById(snapshotId, schema);
   if (snapshotResult.error || !snapshotResult.data) {
     return { snapshot: snapshotResult.data, observations: [], truncated: false, error: snapshotResult.error };
   }

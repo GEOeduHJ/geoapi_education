@@ -21,9 +21,16 @@ describe("curated dataset catalog", () => {
 
   it("marks only datasets with verified stored data as ready", () => {
     const ready = DATASET_CATALOG.filter((dataset) => dataset.status === "ready");
-    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count"]);
+    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count", "airkorea-station-daily", "tourapi-area-attractions"]);
+    expect(getDataset("tourapi-area-attractions")).toMatchObject({
+      scope: "domestic",
+      provider: "한국관광공사",
+      status: "ready",
+      kind: "point",
+      capabilities: ["map", "table"],
+    });
     expect(getDataset("kosis-sido-city-park-per-capita")?.storage).toBe("supabase");
-    expect(getDataset("airkorea-station-daily")?.status).toBe("planned");
+    expect(getDataset("world-bank-population-density")?.status).toBe("planned");
   });
 
   it("keeps the ready KMA dataset's declared period in sync with the chart's actual DB coverage bounds", () => {
@@ -112,6 +119,12 @@ describe("mapDatasetCatalogRow", () => {
     expect(mapDatasetCatalogRow(baseRow)?.snapshotId).toBeNull();
     expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "snap-1" })?.snapshotId).toBe("snap-1");
     expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "  " })?.snapshotId).toBeNull();
+  });
+
+  it("maps point-kind datasets from catalog metadata", () => {
+    expect(mapDatasetCatalogRow(baseRow)?.kind).toBe("polygon");
+    expect(mapDatasetCatalogRow({ ...baseRow, metadata: { kind: "point" } })?.kind).toBe("point");
+    expect(mapDatasetCatalogRow({ ...baseRow, metadata: { kind: "heatmap" } })?.kind).toBe("polygon");
   });
 
   it("parses indicator lists from catalog metadata and falls back to single", () => {

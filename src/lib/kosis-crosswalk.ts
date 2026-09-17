@@ -38,3 +38,53 @@ export function mapKosisRegionCodeToSgisAdmCd(regionCode: string | null): string
   if (!code) return null;
   return KOSIS_SGG_TO_SGIS_ADM_CD[code] ?? code;
 }
+
+/**
+ * 에어코리아 시도명 → SGIS `adm_cd`. 측정망이 쓰는 단축 시도명 16종을
+ * 명시적으로 나열한다(추정 매칭 금지). `전남광주`는 통합 과도기로
+ * 옛 광주(24)·전남(36) 두 경계에 함께 결합한다.
+ */
+export const AIRKOREA_SIDO_TO_SGIS_ADM_CD: Record<string, string | string[]> = {
+  "서울": "11",
+  "부산": "21",
+  "대구": "22",
+  "인천": "23",
+  "광주": "24",
+  "대전": "25",
+  "울산": "26",
+  "세종": "29",
+  "경기": "31",
+  "강원": "32",
+  "충북": "33",
+  "충남": "34",
+  "전북": "35",
+  "전남": "36",
+  "경북": "37",
+  "경남": "38",
+  "제주": "39",
+  "전남광주": ["24", "36"],
+};
+
+/**
+ * TourAPI areaCode → SGIS `adm_cd`. areaCode2 목록의 17개 지역을
+ * 명시적으로 나열한다. 5=광주광역시, 38=전라남도로 1:1 대응한다.
+ */
+export const TOUR_AREA_TO_SGIS_ADM_CD: Record<string, string> = {
+  "1": "11",
+  "2": "23",
+  "3": "25",
+  "4": "22",
+  "5": "24",
+  "6": "21",
+  "7": "26",
+  "8": "29",
+  "31": "31",
+  "32": "32",
+  "33": "33",
+  "34": "34",
+  "35": "37",
+  "36": "38",
+  "37": "35",
+  "38": "36",
+  "39": "39",
+};

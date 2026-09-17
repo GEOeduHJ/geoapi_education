@@ -122,4 +122,19 @@ describe("KOSIS to SGIS boundary join", () => {
     expect(result.crosswalk).toEqual([]);
     expect(result.matchedCount).toBe(1);
   });
+
+  it("fans out one observation to several boundaries for integrated regions", () => {
+    const result = joinKosisObservationsToSgisBoundaries(
+      boundaries(["11", "24", "36"]),
+      [observation("o-11", "11", 100), observation("o-jg", "전남광주", 50)],
+      { codeMap: { "전남광주": ["24", "36"] } },
+    );
+
+    expect(result.status).toBe("ready");
+    expect(result.matchedCount).toBe(3);
+    expect(result.missingBoundaryCount).toBe(0);
+    expect(result.crosswalk).toEqual([{ from: "전남광주", to: "24" }, { from: "전남광주", to: "36" }]);
+    expect(result.values["24"]).toEqual(expect.objectContaining({ value: 50, observationId: "o-jg" }));
+    expect(result.values["36"]).toEqual(expect.objectContaining({ value: 50, observationId: "o-jg" }));
+  });
 });

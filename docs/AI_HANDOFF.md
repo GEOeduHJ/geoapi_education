@@ -432,16 +432,30 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | QUERY-UX: 조건·시각화 섹션 분리, 연도 선택 상단화 | `bb362be` | typecheck/test(92)/build 통과, dev 서버 200 확인 |
 | 2026-09-17 | OpenCode | ESRI-BASEMAP: NGII 원복 후 밝은 회색지도 옵션 (브라우저 확인 대기) | `fb3314a` | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 ### PHASE-C — 지표·산업 셀렉터 (완료, 2026-09-17)
-
 **배경 (사용자 지적):** 사업체 분류·공원 세부 항목 같은 하위 옵션이 없었다.
 
 **완료 내용:** 지표 snapshot 21건 추가 적재·공개(총 27개·17,820행). `DatasetIndicator` + 카탈로그 metadata 연결로 dataset별 지표 셀렉터, 사업체 19산업 선택지(`kosis-dimensions.ts` + 분류 필터) 추가. ingest label을 지역명으로 보정. PM10/PM2.5는 API 빈 응답으로 제외(에어코리아로 이관).
 
 **검증:** typecheck/test(100)/build 통과. 27개 snapshot 전수·27개 indicators 연결 확인. 실측 조인: 제조업 2024 17/17 포함 통과.
 
+### PHASE-D — 에어코리아 시도 실시간 (완료, 2026-09-17)
+**완료 내용:** `scripts/airkorea-snapshot.mjs` 신규(시도별 672행→최다관측시각 664행→시도 평균 16행). PM10/PM2.5 snapshot 2건 공개 적재. repository에 schema 파라미터, join에 1:N crosswalk fan-out, adapter·workspace를 provider 일반화(`Snapshot2DWorkspace`로 개명), `CreatePage`를 provider 게이트로 확장. 정적·DB 카탈로그에 에어코리아 ready 등록(지표 2건). 국내 ready 8개.
+
+**검증:** typecheck/test(103)/build 통과. 실측 조인 PM10·PM25 17/17(전남광주→24·36 fan-out) 통과.
+
+### PHASE-E — TourAPI 관광지 점분포 (완료, 2026-09-17)
+
+**완료 내용:** `scripts/tourapi-snapshot.mjs` 신규(지역별 17 snapshots·6,677행·좌표 100%). POI 포인트 파이프라인: `tourapi-adapter`·`Poi2DWorkspace`(검색·목록·CSV·출처)·`updateVWorld2DPointLayer`·점 클릭 상세. `DatasetDefinition.kind`(polygon/point) 추가로 choropleth/point 분기. 정적·DB 카탈로그에 관광지 ready 등록(지역 지표 17건). 국내 ready 9개. EV는 시도 단위 상한 초과로 시군구 분할 계획으로 이관.
+
+**검증:** typecheck/test(109)/build 통과. 실측 POI 변환·표·출처 통과.
+
+| 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | `f008dff` | typecheck/test(94)/build 통과 |
+
 | 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | `f008dff` | typecheck/test(94)/build 통과 |
 | 2026-09-17 | OpenCode | PHASE-C: 21개 지표 적재·지표/산업 셀렉터 | `f008dff` | typecheck/test(100)/build 통과, 전수 실측 통과 |
 | 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | PHASE-D: 에어코리아 적재·provider 일반화·ready 8개 | 미커밋 로컬 변경 | typecheck/test(103)/build 통과, 실측 fan-out 통과 |
+| 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | 미커밋 로컬 변경 | typecheck/test(109)/build 통과, 실측 POI 통과 |
 
 ## 15. 문서 기준 우선순위
 

@@ -258,6 +258,28 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 배포 후 지표·산업·연도 전환 렌더 확인
 - 커밋: `f008dff feat: indicator and industry selectors with 27 public snapshots`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — PHASE-D 에어코리아 시도 실시간
+
+- 결과: 완료
+- 변경: `scripts/airkorea-snapshot.mjs`+테스트(신규), `src/lib/geo-observations.ts`(schema 파라미터), `src/lib/geo-join.ts`(1:N fan-out), `src/lib/kosis-crosswalk.ts`(시도명 17종), `src/lib/kosis-adapter.ts`(provider 파라미터), `Snapshot2DWorkspace` 개명·일반화, `src/pages/CreatePage.tsx`(provider 게이트), 카탈로그 정적·DB 등록. snapshot 2건·32행 공개 적재
+- 결정/데이터: 측정소 672행→최다시각 664행→시도 평균 16행. 전남광주는 24·36 fan-out. 공공누리 3유형 출처 보존. 국내 ready 8개
+- 검증: typecheck/test(103)/build 통과. 실측 fan-out 17/17 통과
+- 브라우저/API: AirKorea API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: 배포 후 에어코리아 전환 렌더 확인
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — PHASE-E TourAPI 관광지 점분포
+
+- 결과: 완료
+- 변경: `scripts/tourapi-snapshot.mjs`+테스트(신규), `src/lib/tourapi-adapter.ts`+테스트(신규), `src/components/Poi2DWorkspace.tsx`(신규), `src/lib/vworld2d.ts`(POI 레이어·클릭), `src/components/VWorld2DMap.tsx`(점·상세), `src/lib/dataset-catalog.ts`(`kind`), `src/pages/CreatePage.tsx`(POI 분기), 운영 DB에 17 snapshots·6,677행 공개 적재 + 카탈로그 등록
+- 결정/데이터: 지표 셀렉터를 지역 선택으로 재사용(17 지역 snapshots). 이미지는 URL·라이선스만 보관. EV는 시도 상한 초과로 시군구 분할 이관
+- 검증: typecheck/test(109)/build 통과. 실측 POI 294/294 변환 통과
+- 브라우저/API: TourAPI 실측. 키·원문 비밀값 기록 없음. 점 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: EV 시군구 분할 또는 단기예보 클릭 조회
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

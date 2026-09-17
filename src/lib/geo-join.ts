@@ -63,7 +63,7 @@ function distinctDimensionValues(
 export function joinKosisObservationsToSgisBoundaries(
   boundaries: SgisBoundaryResponse | null,
   observations: PublicGeoObservation[],
-  options: { codeMap?: Record<string, string> } = {},
+  options: { codeMap?: Record<string, string | string[]> } = {},
 ): BoundaryJoinResult {
   const boundaryFeatures = boundaries?.data.features ?? [];
   const boundaryCodes = new Set(
@@ -84,13 +84,17 @@ export function joinKosisObservationsToSgisBoundaries(
   for (const observation of numericObservations) {
     const rawCode = canonicalCode(observation.region_code);
     if (!rawCode) continue;
-    const code = options.codeMap?.[rawCode] ?? rawCode;
-    if (code !== rawCode && !crosswalk.some((entry) => entry.from === rawCode)) {
-      crosswalk.push({ from: rawCode, to: code });
+    // 대응표 값이 배열이면 여러 경계에 같은 값을 채운다(행정통합 과도기 등).
+    const mapped = options.codeMap?.[rawCode] ?? rawCode;
+    const codes = (Array.isArray(mapped) ? mapped : [mapped]).map((code) => code.trim()).filter(Boolean);
+    for (const code of codes) {
+      if (code !== rawCode && !crosswalk.some((entry) => entry.from === rawCode && entry.to === code)) {
+        crosswalk.push({ from: rawCode, to: code });
+      }
+      const rows = observationsByCode.get(code) ?? [];
+      rows.push(observation);
+      observationsByCode.set(code, rows);
     }
-    const rows = observationsByCode.get(code) ?? [];
-    rows.push(observation);
-    observationsByCode.set(code, rows);
   }
 
   const ambiguousCodes = [...observationsByCode.entries()]

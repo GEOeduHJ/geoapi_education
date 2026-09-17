@@ -327,6 +327,7 @@ function createBoundaryFeature(
 const boundaryLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
 const stationLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
 const esriLayerByMap = new WeakMap<VWorldMap, VWorldLayer[]>();
+const poiLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
 const CHOROPLETH_COLORS = [
   "rgba(229, 241, 236, 0.76)",
   "rgba(167, 218, 198, 0.78)",
@@ -477,6 +478,59 @@ export function updateVWorld2DStationLayer(
   stationLayerByMap.set(map, stationLayer);
 }
 
+export interface PoiPointInput {
+  id: string;
+  lon: number;
+  lat: number;
+}
+
+function createPoiLayer(
+  runtime: VWorld2DRuntime,
+  points: PoiPointInput[],
+): VWorldLayer | null {
+  if (!points.length) return null;
+  const style = new runtime.ol.style.Style({
+    image: new runtime.ol.style.Circle({
+      radius: 5,
+      fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.9)" }),
+      stroke: new runtime.ol.style.Stroke({ color: "#ffffff", width: 1.5 }),
+    }),
+  });
+  const features = points.map((point) => {
+    const feature = new runtime.ol.Feature({
+      geometry: new runtime.ol.geom.Point(
+        runtime.ol.proj.fromLonLat([point.lon, point.lat], "EPSG:900913"),
+      ),
+      poiId: point.id,
+    });
+    feature.setStyle(style);
+    return feature;
+  });
+  const source = new runtime.ol.source.Vector({ features });
+  const poiLayer = new runtime.ol.layer.Vector({ source });
+  poiLayer.set("name", "POI 점분포");
+  poiLayer.set("valueCount", points.length);
+  return poiLayer;
+}
+
+/** Adds or replaces the generic POI point layer (e.g. TourAPI attractions). */
+export function updateVWorld2DPointLayer(
+  runtime: VWorld2DRuntime,
+  map: VWorldMap,
+  points: PoiPointInput[] | null,
+): void {
+  const previousLayer = poiLayerByMap.get(map);
+  if (previousLayer) {
+    map.removeLayer(previousLayer);
+    poiLayerByMap.delete(map);
+  }
+  if (!points || !points.length) return;
+  const poiLayer = createPoiLayer(runtime, points);
+  if (!poiLayer) return;
+  map.addLayer(poiLayer);
+  poiLayerByMap.set(map, poiLayer);
+}
+
 /** Changes only the VWorld background while preserving user-added vector layers. */
 export function setVWorld2DBasemap(
   runtime: VWorld2DRuntime,
@@ -527,11 +581,14 @@ export function updateEsriGrayLayer(
 
     const boundaryLayer = boundaryLayerByMap.get(map);
     const stationLayer = stationLayerByMap.get(map);
+    const poiLayer = poiLayerByMap.get(map);
     if (boundaryLayer) map.removeLayer(boundaryLayer);
     if (stationLayer) map.removeLayer(stationLayer);
+    if (poiLayer) map.removeLayer(poiLayer);
     for (const layer of layers) map.addLayer(layer);
     if (boundaryLayer) map.addLayer(boundaryLayer);
     if (stationLayer) map.addLayer(stationLayer);
+    if (poiLayer) map.addLayer(poiLayer);
     esriLayerByMap.set(map, layers);
     return true;
   } catch {
@@ -566,6 +623,7 @@ export function createVWorld2DMap(
   onSelectStation: (stationId: string | null) => void,
   basemapType: VWorldBasemapKey = "GRAPHIC_WHITE",
   stationValues: Record<string, number | null> | null = null,
+  onSelectPoi: (poiId: string | null) => void = () => undefined,
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
@@ -587,6 +645,11 @@ export function createVWorld2DMap(
   }
   map.on("singleclick", (event) => {
     const feature = map.forEachFeatureAtPixel(event.pixel, (candidate) => candidate);
+    const poiId = feature === false ? null : feature?.get("poiId");
+    if (typeof poiId === "string") {
+      onSelectPoi(poiId);
+      return;
+    }
     const stationId = feature === false ? null : feature?.get("stationId");
     onSelectStation(typeof stationId === "string" ? stationId : null);
   });
@@ -596,6 +659,11 @@ export function createVWorld2DMap(
 }
 
 export function disposeVWorld2DMap(runtime: VWorld2DRuntime, map: VWorldMap): void {
+  const poiLayer = poiLayerByMap.get(map);
+  if (poiLayer) {
+    map.removeLayer(poiLayer);
+    poiLayerByMap.delete(map);
+  }
   const esriLayers = esriLayerByMap.get(map) ?? [];
   for (const layer of esriLayers) map.removeLayer(layer);
   esriLayerByMap.delete(map);

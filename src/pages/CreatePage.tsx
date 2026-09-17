@@ -5,16 +5,18 @@ import { ClimateComparison } from "../components/ClimateComparison";
 import { DatasetSelector } from "../components/DatasetSelector";
 import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
-import { Kosis2DWorkspace } from "../components/Kosis2DWorkspace";
+import { Snapshot2DWorkspace } from "../components/Snapshot2DWorkspace";
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
 import { useDatasetCatalog, getDatasetIndicators, type DatasetScope } from "../lib/dataset-catalog";
 import { getKosisDimensions } from "../lib/kosis-dimensions";
 import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
-import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, type PublicKosisDataset } from "../lib/geo-observations";
+import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
-import { KOSIS_SGG_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
+import { AIRKOREA_SIDO_TO_SGIS_ADM_CD, KOSIS_SGG_TO_SGIS_ADM_CD, TOUR_AREA_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
+import { toPoiPoints } from "../lib/tourapi-adapter";
+import { Poi2DWorkspace } from "../components/Poi2DWorkspace";
 import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
 import { toNormalizedRecords, toMapLayerSpec } from "../lib/kma-adapter";
 
@@ -116,11 +118,14 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [kosisYear, setKosisYear] = useState("");
   const [indicatorKey, setIndicatorKey] = useState("");
   const [dimSelections, setDimSelections] = useState<Record<string, string>>({});
+  const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
   const mapExportRef = useRef<HTMLDivElement | null>(null);
   const datasets = useDatasetCatalog(scope);
   const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
   const isKma = datasetKey === "kma-asos-climate-10y";
-  const isKosisDataset = isDomestic && !isThreeD && dataset?.provider === "KOSIS";
+  const isSnapshotDataset = isDomestic && !isThreeD && (dataset?.provider === "KOSIS" || dataset?.provider === "에어코리아");
+  const isPoiDataset = isDomestic && !isThreeD && dataset?.kind === "point";
+  const snapshotSchema = dataset?.provider === "에어코리아" ? AIRKOREA_SNAPSHOT_SCHEMA : KOSIS_SNAPSHOT_SCHEMA;
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
   const kosisIndicators = useMemo(() => (dataset ? getDatasetIndicators(dataset) : []), [dataset]);
   const effectiveIndicator = kosisIndicators.find((entry) => entry.key === indicatorKey) ?? kosisIndicators[0] ?? null;
@@ -136,6 +141,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     setKosisYear("");
     setIndicatorKey("");
     setDimSelections({});
+    setSelectedPoiId(null);
   }, [isDomestic]);
 
   useEffect(() => {
@@ -152,7 +158,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     setSgisBoundaryStatus("loading");
     setSgisBoundaries(null);
     setSgisBoundaryError(null);
-    if (isKosisDataset) {
+    if (isSnapshotDataset || isPoiDataset) {
       setKosisStatus("loading");
       setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
     } else {
@@ -166,10 +172,10 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       setSgisBoundaries(boundaryResult.data);
       setSgisBoundaryError(boundaryResult.error);
       setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
-      if (!isKosisDataset) return;
+      if (!isSnapshotDataset && !isPoiDataset) return;
       const kosisResult = indicatorSnapshotId
-        ? await fetchPublicKosisDataset(indicatorSnapshotId)
-        : await fetchLatestPublicKosisDataset();
+        ? await fetchPublicKosisDataset(indicatorSnapshotId, snapshotSchema)
+        : await fetchLatestPublicKosisDataset(snapshotSchema);
       if (cancelled) return;
       setKosisDataset(kosisResult);
       setKosisStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
@@ -178,13 +184,13 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       if (cancelled) return;
       setSgisBoundaryStatus("error");
       setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
-      if (isKosisDataset) {
+      if (isSnapshotDataset || isPoiDataset) {
         setKosisStatus("error");
         setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
       }
     });
     return () => { cancelled = true; };
-  }, [isDomestic, isKosisDataset, isThreeD, indicatorSnapshotId]);
+  }, [isDomestic, isSnapshotDataset, isPoiDataset, isThreeD, indicatorSnapshotId, snapshotSchema]);
 
   const visibleBoundaries = useMemo<SgisBoundaryResponse | null>(() => {
     if (!sgisBoundaries || !boundaryCode) return sgisBoundaries;
@@ -216,9 +222,31 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   );
 
   const boundaryJoin = useMemo(
-    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, yearFilteredKosisObservations, { codeMap: KOSIS_SGG_TO_SGIS_ADM_CD }),
+    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, yearFilteredKosisObservations, { codeMap: { ...KOSIS_SGG_TO_SGIS_ADM_CD, ...AIRKOREA_SIDO_TO_SGIS_ADM_CD } }),
     [yearFilteredKosisObservations, visibleBoundaries],
   );
+
+  const poiObservations = useMemo(() => {
+    if (!isPoiDataset) return [];
+    if (!boundaryCode) return kosisDataset.observations;
+    return kosisDataset.observations.filter((observation) => {
+      const areaCode = typeof observation.attributes.area_code === "string" ? observation.attributes.area_code : "";
+      return (TOUR_AREA_TO_SGIS_ADM_CD[areaCode] ?? "") === boundaryCode;
+    });
+  }, [isPoiDataset, kosisDataset.observations, boundaryCode]);
+
+  const poiPoints = useMemo(
+    () => (isPoiDataset ? toPoiPoints(poiObservations) : null),
+    [isPoiDataset, poiObservations],
+  );
+
+  const selectedPoiDetail = useMemo(() => {
+    if (!selectedPoiId) return null;
+    const found = poiObservations.find((observation) => observation.id === selectedPoiId);
+    if (!found) return null;
+    const address = typeof found.attributes.address === "string" ? found.attributes.address : "";
+    return { title: found.label ?? "", address };
+  }, [selectedPoiId, poiObservations]);
 
   const visibleStationIds = useMemo(() => {
     if (!boundaryCode) return climateState.stations.map((station) => station.station_id);
@@ -308,14 +336,17 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             <VWorld2DMap
               boundaries={visibleBoundaries}
               boundaryValues={
-                isKosisDataset && boundaryJoin.status === "ready" ? boundaryJoin.values :
+                isSnapshotDataset && boundaryJoin.status === "ready" ? boundaryJoin.values :
                 isKma && kmaAggregatedBoundaryValues ? kmaAggregatedBoundaryValues :
                 null
               }
-              boundaryValueLabel={isKosisDataset ? "KOSIS 값" : isKma ? "KMA 경계별 평균" : "경계값"}
+              boundaryValueLabel={isSnapshotDataset ? "공개값" : isKma ? "KMA 경계별 평균" : "경계값"}
               stationValues={null}
               visibleStationIds={[]}
               showStations={false}
+              poiPoints={poiPoints}
+              onSelectPoi={setSelectedPoiId}
+              selectedPoi={selectedPoiDetail}
             />
           </div>
         ) : (
@@ -325,7 +356,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
           <div className="sidebar-section">
             <p className="eyebrow">01 · QUERY</p>
             <h3>{scope === "domestic" ? "자료·조건 선택" : "세계 자료 선택"}</h3>
-            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); setIndicatorKey(""); setDimSelections({}); }} />
+            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); setIndicatorKey(""); setDimSelections({}); setSelectedPoiId(null); }} />
             {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
             {!isThreeD && isDomestic && isKma && (
               <>
@@ -338,12 +369,12 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                 <small className="field-help">지표·기간 조건이 지도·그래프·자료표에 함께 적용됩니다.</small>
               </>
             )}
-            {isKosisDataset && (
+            {(isSnapshotDataset || isPoiDataset) && (
               <>
                 {kosisIndicators.length > 1 && (
                   <>
-                    <label className="field-label" htmlFor="kosis-indicator">지표</label>
-                    <select id="kosis-indicator" value={effectiveIndicator?.key ?? ""} onChange={(event) => { setIndicatorKey(event.target.value); setKosisYear(""); setDimSelections({}); }}>
+                    <label className="field-label" htmlFor="query-indicator">{isPoiDataset ? "지역" : "지표"}</label>
+                    <select id="query-indicator" value={effectiveIndicator?.key ?? ""} onChange={(event) => { setIndicatorKey(event.target.value); setKosisYear(""); setDimSelections({}); setSelectedPoiId(null); setSelectedPoiId(null); }}>
                       {kosisIndicators.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}{entry.unit ? ` (${entry.unit})` : ""}</option>)}
                     </select>
                   </>
@@ -361,13 +392,20 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                     </select>
                   </span>
                 ))}
-                <label className="field-label" htmlFor="kosis-year">연도</label>
-                <select id="kosis-year" value={effectiveKosisYear} onChange={(event) => setKosisYear(event.target.value)} disabled={availableKosisYears.length === 0}>
-                  {availableKosisYears.length === 0
-                    ? <option value="">연도 불러오는 중…</option>
-                    : availableKosisYears.map((year) => <option key={year} value={year}>{year}</option>)}
-                </select>
-                <small className="field-help">선택한 연도의 값으로 지도·그래프·자료표가 함께 갱신됩니다.</small>
+                {isSnapshotDataset && (
+                  <>
+                    <label className="field-label" htmlFor="kosis-year">연도</label>
+                    <select id="kosis-year" value={effectiveKosisYear} onChange={(event) => setKosisYear(event.target.value)} disabled={availableKosisYears.length === 0}>
+                      {availableKosisYears.length === 0
+                        ? <option value="">연도 불러오는 중…</option>
+                        : availableKosisYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                    <small className="field-help">선택한 연도의 값으로 지도·그래프·자료표가 함께 갱신됩니다.</small>
+                  </>
+                )}
+                {isPoiDataset && (
+                  <small className="field-help">선택한 지역의 관심지점이 지도와 목록에 함께 표시됩니다. 점을 클릭하면 이름·주소를 확인합니다.</small>
+                )}
               </>
             )}
             {!isThreeD && isDomestic && (
@@ -383,9 +421,9 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                 {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
               </>
             )}
-            {!isThreeD && isKosisDataset && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
-            {!isThreeD && isKosisDataset && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
-            {!isThreeD && isKosisDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
+            {!isThreeD && (isSnapshotDataset || isPoiDataset) && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
+            {!isThreeD && (isSnapshotDataset || isPoiDataset) && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
+            {!isThreeD && isSnapshotDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>
@@ -403,7 +441,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
-      {isKosisDataset && <Kosis2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
+      {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
+      {isPoiDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} observations={poiObservations} error={kosisDataset.error ?? sgisBoundaryError} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

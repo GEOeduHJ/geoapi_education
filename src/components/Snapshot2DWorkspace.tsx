@@ -18,9 +18,10 @@ function cellText(value: unknown): string {
   return String(value);
 }
 
-export function Kosis2DWorkspace({
+export function Snapshot2DWorkspace({
   datasetTitle,
   sourceUrl,
+  providerLabel,
   status,
   snapshot,
   joinResult,
@@ -31,6 +32,7 @@ export function Kosis2DWorkspace({
 }: {
   datasetTitle: string;
   sourceUrl: string;
+  providerLabel: string;
   status: KosisPanelStatus;
   snapshot: PublicSourceSnapshot | null;
   joinResult: BoundaryJoinResult;
@@ -49,8 +51,8 @@ export function Kosis2DWorkspace({
   const chartSpec = useMemo(() => toKosisChartSpec(records), [records]);
   const tableModel = useMemo(() => toKosisTableModel(records), [records]);
   const provenance = useMemo(
-    () => toKosisProvenance(snapshot, records, datasetTitle, sourceUrl, selectedYear || undefined),
-    [snapshot, records, datasetTitle, sourceUrl, selectedYear],
+    () => toKosisProvenance(snapshot, records, datasetTitle, sourceUrl, selectedYear || undefined, providerLabel),
+    [snapshot, records, datasetTitle, sourceUrl, selectedYear, providerLabel],
   );
 
   const values = chartSpec.records.map((record) => chartSpec.yField(record));
@@ -69,7 +71,7 @@ export function Kosis2DWorkspace({
     <section className="climate-2d-workspace" ref={exportRef} aria-labelledby="kosis-2d-title">
       <div className="climate-2d-workspace__heading">
         <div>
-          <p className="eyebrow">KOSIS · 2D DATA VIEW</p>
+          <p className="eyebrow">{providerLabel} · 2D DATA VIEW</p>
           <h2 id="kosis-2d-title">시도별 통계자료 표현</h2>
           <p>지도와 같은 조회 조건(공개 snapshot·시도 경계)을 순위 그래프·자료표에 적용합니다. 단일 지표·단일 시점 snapshot만 사용합니다.</p>
         </div>
@@ -83,14 +85,14 @@ export function Kosis2DWorkspace({
       <MaterialExportActions targetRef={exportRef} fileName={`geolab-2d-${exportSlug}`} onExportCsv={showResults ? handleExportCsv : undefined} />
 
       {status === "loading" && <div className="climate-message" role="status">저장된 통계자료를 불러오는 중입니다…</div>}
-      {status === "error" && <div className="climate-message climate-message--error" role="alert"><strong>자료를 불러오지 못했습니다.</strong><span>공개 KOSIS snapshot 읽기 상태를 확인하세요.</span>{error && <small>{error}</small>}</div>}
+      {status === "error" && <div className="climate-message climate-message--error" role="alert"><strong>자료를 불러오지 못했습니다.</strong><span>공개 snapshot 읽기 상태를 확인하세요.</span>{error && <small>{error}</small>}</div>}
       {(status === "empty" || (status === "ready" && !snapshot)) && <div className="climate-message" role="status"><strong>공개 snapshot이 아직 없습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 그래프·표가 활성화됩니다.</span></div>}
       {status === "ready" && snapshot && joinResult.status !== "ready" && (
         <div className="climate-message climate-message--error" role="alert">
           <strong>지역 결합 조건을 만족하지 않아 그래프·표를 보류합니다.</strong>
           <span>
             {joinResult.status === "ambiguous-values" && "기간·단위가 섞였거나 한 지역에 여러 숫자값이 있습니다."}
-            {joinResult.status === "no-code-matches" && "KOSIS 지역코드와 SGIS 경계코드가 일치하지 않습니다."}
+            {joinResult.status === "no-code-matches" && "지역코드와 SGIS 경계코드가 일치하지 않습니다."}
             {joinResult.status === "no-boundaries" && "SGIS 경계가 준비되지 않았습니다."}
             {joinResult.status === "no-public-values" && "결합할 숫자값이 없습니다."}
           </span>

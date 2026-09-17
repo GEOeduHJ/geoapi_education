@@ -73,12 +73,13 @@ export function toKosisProvenance(
   datasetTitle: string,
   sourceUrl: string,
   requestedYear?: string,
+  provider = "KOSIS",
 ): Provenance {
   const stamps = records.map((record) => record.timestamp).filter(Boolean).sort();
   const unit = records[0]?.unit ?? "";
   return {
     datasetTitle,
-    provider: "KOSIS",
+    provider,
     sourceUrl,
     snapshotId: snapshot?.id,
     requestedPeriod: {
