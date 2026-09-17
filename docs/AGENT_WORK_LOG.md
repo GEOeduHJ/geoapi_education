@@ -322,7 +322,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: VWorld 3D 가이드·로더 실측. 키 값 기록 없음
 - 차단/주의: gate 미통과 상태. 렌더 확인 전까지 gate 통과로 보지 않음
 - 다음 작업: Production `/create/3d` 렌더·기둥·카메라 확인
-- 커밋: 미커밋 로컬 변경
+- 커밋: `6c57ba5 feat: VWorld 3D prism map vertical slice`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
