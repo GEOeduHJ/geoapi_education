@@ -31,21 +31,23 @@ function snapshotRange(snapshot: PublicSourceSnapshot): string {
   return snapshot.valid_from || snapshot.valid_to || "기간 정보 없음";
 }
 
-function describeError(error: string | null): string {
-  if (!error) return "공개 KOSIS snapshot을 불러오지 못했습니다.";
+function describeError(error: string | null, providerLabel: string): string {
+  if (!error) return `공개 ${providerLabel} snapshot을 불러오지 못했습니다.`;
   if (error === "SUPABASE_NOT_CONFIGURED") return "브라우저용 Supabase 환경변수가 아직 연결되지 않았습니다.";
   if (/schema cache|relation .* does not exist|column .* does not exist/i.test(error)) {
-    return "Supabase의 KOSIS 공개 읽기 구조가 아직 적용되지 않았습니다.";
+    return `Supabase의 ${providerLabel} 공개 읽기 구조가 아직 적용되지 않았습니다.`;
   }
-  return "공개 KOSIS snapshot을 읽는 중 문제가 발생했습니다.";
+  return `공개 ${providerLabel} snapshot을 읽는 중 문제가 발생했습니다.`;
 }
 
 export function KosisPublicSnapshotPanel({
   status,
   dataset,
+  providerLabel = "KOSIS",
 }: {
   status: KosisPanelStatus;
   dataset: PublicKosisDataset;
+  providerLabel?: string;
 }) {
   const { snapshot, observations, truncated, error } = dataset;
 
@@ -64,7 +66,7 @@ export function KosisPublicSnapshotPanel({
       {status === "error" && (
         <div className="kosis-public-panel__message kosis-public-panel__message--error" role="alert">
           <strong>공개 자료를 준비하지 못했습니다.</strong>
-          <span>{describeError(error)}</span>
+          <span>{describeError(error, providerLabel)}</span>
           <small>`0005_kosis_observation_access.sql` 실행 여부와 `is_public=true` 적재 상태를 확인하세요.</small>
         </div>
       )}
@@ -82,7 +84,7 @@ export function KosisPublicSnapshotPanel({
             <div><dt>수집 시각</dt><dd>{formatDate(snapshot.fetched_at)}</dd></div>
             <div><dt>검증 checksum</dt><dd>{snapshot.checksum ? `${snapshot.checksum.slice(0, 12)}…` : "없음"}</dd></div>
           </dl>
-          <div className="kosis-public-panel__rows" aria-label="공개 KOSIS 관측값 일부">
+          <div className="kosis-public-panel__rows" aria-label="공개 관측값 일부">
             <div className="kosis-public-panel__rows-heading"><strong>공개값 일부</strong><span>{observations.length.toLocaleString("ko-KR")}개 읽음</span></div>
             {observations.slice(0, 6).map((observation) => (
               <div className="kosis-public-panel__row" key={observation.id}>
@@ -96,7 +98,7 @@ export function KosisPublicSnapshotPanel({
           </div>
           <div className="kosis-public-panel__note">
             <strong>2D 경계 연결 대기</strong>
-            <span>KOSIS 값에는 geometry가 없으므로 지역코드를 SGIS/VWorld 행정구역 경계와 조인한 뒤 단계구분도로 표현합니다.</span>
+            <span>{providerLabel} 값에는 geometry가 없으므로 지역코드를 행정구역 경계와 조인한 뒤 단계구분도로 표현합니다.</span>
           </div>
         </>
       )}

@@ -343,9 +343,13 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 
 **다음:** 배포 후 7개 dataset 전환·연도 슬라이더 렌더 확인.
 
-### 2D-04 — World Bank 세계 2D 수직 슬라이스 (보류: 국내 완성 후)
+### 2D-04 — World Bank 세계 2D 수직 슬라이스 (완료, 2026-09-17)
 
-**보류 (2026-09-17, 사용자 결정):** 세계 지도 제작은 국내 지도가 완성된 뒤에 착수한다. 국내 완성의 정의는 KMA·KOSIS가 시도 단위에서 지도·그래프·표·출처·export를 모두 제공하는 상태이며, 현재 KOSIS 그래프·표·provenance가 잔여다.
+**완료 내용:** 국가 경계 지도화 가능 확인 → Natural Earth 50m 벤더링(`public/data`, topojson-client) + ISO3→M49 대응표(245행, 양방향 크로스체크·5개 오류 수정) + WB 인구밀도 snapshot 공개(1,820행·2018~2024) + 렌더 파이프라인 일반화(EPSG:4326 분기·세계 초기뷰·라벨) + `/create/2d/world` 연결(경계·지표·연도·국가 선택·순위·표·CSV·출처). 국내 ready 9개·세계 ready 1개.
+
+**검증:** typecheck/test(122)/build 통과. 실측 조인 2023 200개국대 결합(KOR 값 일치, 집계·무도형은 진단 표시).
+
+**보류 해제:** 당초 국내 완성 후 착수 조건이었으나 사용자 지시로 착수. 국내 브라우저 렌더 확인은 여전히 잔여다.
 
 **선행:** `2D-02`
 
@@ -462,6 +466,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | PHASE-D: 에어코리아 적재·provider 일반화·ready 8개 | `fdac808` | typecheck/test(103)/build 통과, 실측 fan-out 통과 |
 | 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | `fdac808` | typecheck/test(109)/build 통과, 실측 POI 통과 |
 | 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | `8ba1bf7` | typecheck/test(115)/build 통과, 프록시 실측 통과 |
+| 2026-09-17 | OpenCode | 2D-04: 세계 국가경계·WB 인구밀도·world UI | 미커밋 로컬 변경 | typecheck/test(122)/build 통과, 실측 조인 통과 |
 
 ## 15. 문서 기준 우선순위
 

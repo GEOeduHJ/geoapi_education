@@ -15,16 +15,18 @@ export function KosisBoundaryJoinStatusPanel({
   result,
   loading,
   error,
+  providerLabel = "KOSIS",
 }: {
   result: BoundaryJoinResult;
   loading: boolean;
   error: string | null;
+  providerLabel?: string;
 }) {
   return (
     <section className="kosis-join-panel" aria-labelledby="kosis-join-panel-title">
       <div className="kosis-join-panel__heading">
         <div>
-          <p className="eyebrow">KOSIS × SGIS / EXACT CODE JOIN</p>
+          <p className="eyebrow">{providerLabel} × BOUNDARY / EXACT CODE JOIN</p>
           <h4 id="kosis-join-panel-title">지도값 결합 상태</h4>
         </div>
         <span>{result.status === "ready" ? "색상 표시" : "색상 보류"}</span>
@@ -57,8 +59,8 @@ export function KosisBoundaryJoinStatusPanel({
       )}
       {!loading && !error && result.status === "no-code-matches" && (
         <div className="kosis-join-panel__message kosis-join-panel__message--warning" role="status">
-          <strong>KOSIS 지역코드와 SGIS 경계코드가 일치하지 않습니다.</strong>
-          <span>지역명으로 추정해 연결하지 않습니다. KOSIS 분류코드와 SGIS `adm_cd` 대응표를 먼저 확인하세요.</span>
+          <strong>{providerLabel} 지역코드와 경계코드가 일치하지 않습니다.</strong>
+          <span>지역명으로 추정해 연결하지 않습니다. {providerLabel} 분류코드와 경계 `adm_cd` 대응표를 먼저 확인하세요.</span>
           {result.unmatchedObservationCodes.length > 0 && <small>일치하지 않은 코드: {result.unmatchedObservationCodes.slice(0, 6).join(", ")}</small>}
         </div>
       )}
@@ -71,7 +73,7 @@ export function KosisBoundaryJoinStatusPanel({
         </div>
       )}
 
-      <p className="kosis-join-panel__notice">행정구역 이름으로 추정하지 않고, KOSIS `region_code`와 SGIS `adm_cd`가 정확히 같거나 공식 대응표로 확인된 경우만 결합합니다.</p>
+      <p className="kosis-join-panel__notice">행정구역 이름으로 추정하지 않고, {providerLabel} `region_code`와 경계 `adm_cd`가 정확히 같거나 공식 대응표로 확인된 경우만 결합합니다.</p>
     </section>
   );
 }

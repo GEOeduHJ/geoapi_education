@@ -18,6 +18,7 @@ import {
   updateVWorld2DPointLayer,
   updateVWorld2DStationLayer,
   VWORLD_BASEMAP_OPTIONS,
+  WORLD_2D_INITIAL_VIEW,
   type PoiPointInput,
   type VWorldBasemapKey,
   type VWorld2DRuntime,
@@ -49,6 +50,9 @@ export function VWorld2DMap({
   selectedPoi = null,
   forecastMode = false,
   onForecastClick = null,
+  worldView = false,
+  boundaryScopeLabel = "SGIS 시도 경계",
+  boundaryCaptionTag = "SGIS BOUNDARY",
 }: {
   boundaries?: SgisBoundaryResponse | null;
   boundaryValues?: Record<string, BoundaryJoinValue> | null;
@@ -61,6 +65,9 @@ export function VWorld2DMap({
   selectedPoi?: { title: string; address: string } | null;
   forecastMode?: boolean;
   onForecastClick?: ((lon: number, lat: number) => void) | null;
+  worldView?: boolean;
+  boundaryScopeLabel?: string;
+  boundaryCaptionTag?: string;
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
@@ -71,6 +78,7 @@ export function VWorld2DMap({
   const stationValuesRef = useRef(stationValues);
   const poiPointsRef = useRef(poiPoints);
   const onSelectPoiRef = useRef(onSelectPoi);
+  const worldViewRef = useRef(worldView);
   const forecastModeRef = useRef(forecastMode);
   const onForecastClickRef = useRef(onForecastClick);
   const [stations, setStations] = useState<ClimateStation[]>([]);
@@ -145,6 +153,7 @@ export function VWorld2DMap({
         (lon, lat) => {
           if (forecastModeRef.current) onForecastClickRef.current?.(lon, lat);
         },
+        worldViewRef.current ? WORLD_2D_INITIAL_VIEW : undefined,
       );
       mapRef.current = { runtime, map };
       updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
@@ -223,7 +232,7 @@ export function VWorld2DMap({
           aria-label={`VWorld 2D 지도${showStations ? "와 KMA ASOS 관측소" : "와 행정경계"} · ${basemapOption.label}`}
         />
         <div className="vworld-map-caption">
-          <span>VWORLD 2D · {showStations ? "KMA ASOS" : "SGIS BOUNDARY"}</span>
+          <span>VWORLD 2D · {showStations ? "KMA ASOS" : boundaryCaptionTag}</span>
           {basemapType === ESRI_GRAY_BASEMAP_KEY && <span>배경 출처: {ESRI_ATTRIBUTION}</span>}
           {showStations && <span>{displayStations.length ? `${displayStations.length}개 관측소` : "관측소 불러오는 중"}</span>}
           {boundaries && <span>{boundaries.data.features.length}개 경계</span>}
@@ -233,7 +242,7 @@ export function VWorld2DMap({
         </div>
         <div className="vworld-map-legend" aria-label="지도 범례">
           {showStations && <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>}
-          {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? ` · ${boundaryValueLabel}` : ""}</span>}
+          {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />{boundaryScopeLabel}{thematicSummary ? ` · ${boundaryValueLabel}` : ""}</span>}
           {poiPoints && poiPoints.length > 0 && <span><i className="vworld-map-legend__dot" />관심지점 분포</span>}
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
           {stationThematicSummary && <span><i className="vworld-map-legend__gradient vworld-map-legend__gradient--point" />지점값 {stationThematicSummary.min.toFixed(1)}–{stationThematicSummary.max.toFixed(1)}</span>}

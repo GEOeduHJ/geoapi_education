@@ -291,6 +291,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: EV 적재 재개 → 세계 5종
 - 커밋: `8ba1bf7 feat: short-term forecast click lookup and EV ingest script`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — 2D-04 세계 국가경계·World Bank
+
+- 결과: 완료
+- 변경: `public/data/world-countries-50m.json`(벤더링), `topojson-client`+types, `src/lib/iso-codes.ts`(245행 대응표), `src/lib/world-boundaries.ts`, `scripts/worldbank-snapshot.mjs`+테스트, `src/lib/vworld2d.ts`(4326 분기·세계뷰), `src/components/VWorld2DMap.tsx`(world props), `src/pages/CreatePage.tsx`(세계 분기 일반화), 패널 provider 문구, 카탈로그 정적·DB 등록. WB snapshot 1,820행 공개 적재
+- 결정/데이터: johan GeoJSON(180개국) 대신 world-atlas 50m(236 도형)+수작업 대응표. 집계 지역·코소보 등 무도형은 진단 표시. KOR 2024 결측(WB 미발행)은 정상
+- 검증: typecheck/test(122)/build 통과. 실측 조인 200개국대 결합
+- 브라우저/API: WB·jsdelivr 실측. 키 없음. 세계 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: 배포 후 세계 렌더 확인 (USGS·Open-Meteo는 후속)
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

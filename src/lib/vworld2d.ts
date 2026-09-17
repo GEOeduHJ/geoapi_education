@@ -300,10 +300,11 @@ function createBoundaryFeature(
   runtime: VWorld2DRuntime,
   boundary: SgisBoundaryFeature,
   style: unknown,
+  toWebMercator: (coordinate: [number, number]) => Coordinate,
 ): VWorldFeature | null {
   const coordinates = transformNestedCoordinates(
     boundary.geometry.coordinates,
-    epsg5179ToWebMercator,
+    toWebMercator,
   );
   if (!Array.isArray(coordinates)) return null;
 
@@ -361,7 +362,13 @@ function createBoundaryLayer(
   boundaries: SgisBoundaryResponse,
   values: Record<string, BoundaryJoinValue> | null,
 ): VWorldLayer | null {
-  if (boundaries.sourceCrs.toUpperCase() !== "EPSG:5179") return null;
+  const crs = boundaries.sourceCrs.toUpperCase();
+  if (crs !== "EPSG:5179" && crs !== "EPSG:4326") return null;
+  // SGIS는 UTM-K, 세계 경계는 WGS84 경위도로 온다. 렌더 전에 WebMercator로 통일한다.
+  const toWebMercator: (coordinate: [number, number]) => Coordinate = crs === "EPSG:5179"
+    ? epsg5179ToWebMercator
+    : ([lon, lat]) => runtime.ol.proj.fromLonLat([lon, lat], "EPSG:900913");
+  const isWorld = crs !== "EPSG:5179";
   const numericValues = Object.values(values ?? {})
     .map((entry) => entry.value)
     .filter((value) => Number.isFinite(value));
@@ -385,14 +392,16 @@ function createBoundaryLayer(
       const fillColor = min !== null && max !== null && typeof value === "number"
         ? getChoroplethColor(value, min, max)
         : "rgba(15, 139, 141, 0.08)";
-      return createBoundaryFeature(runtime, boundary, getStyle(fillColor));
+      return createBoundaryFeature(runtime, boundary, getStyle(fillColor), toWebMercator);
     })
     .filter((feature): feature is VWorldFeature => feature !== null);
   if (!boundaryFeatures.length) return null;
 
   const boundarySource = new runtime.ol.source.Vector({ features: boundaryFeatures });
   const boundaryLayer = new runtime.ol.layer.Vector({ source: boundarySource });
-  boundaryLayer.set("name", min !== null ? "SGIS 시도 행정구역 · KOSIS 단계구분도" : "SGIS 시도 행정구역 경계");
+  boundaryLayer.set("name", min !== null
+    ? (isWorld ? "세계 국가 경계 · 단계구분도" : "SGIS 시도 행정구역 · KOSIS 단계구분도")
+    : (isWorld ? "세계 국가 경계" : "SGIS 시도 행정구역 경계"));
   boundaryLayer.set("sourceCrs", boundaries.sourceCrs);
   boundaryLayer.set("joinStatus", min !== null ? "ready" : "reference");
   if (min !== null && max !== null) {
@@ -625,6 +634,13 @@ export function webMercatorToLonLat([x, y]: [number, number]): { lon: number; la
   };
 }
 
+export interface VWorld2DInitialView {
+  center: [number, number];
+  zoom: number;
+}
+
+export const WORLD_2D_INITIAL_VIEW: VWorld2DInitialView = { center: [15, 30], zoom: 2 };
+
 export function createVWorld2DMap(
   runtime: VWorld2DRuntime,
   containerId: string,
@@ -634,9 +650,13 @@ export function createVWorld2DMap(
   stationValues: Record<string, number | null> | null = null,
   onSelectPoi: (poiId: string | null) => void = () => undefined,
   onEmptyClick: (lon: number, lat: number) => void = () => undefined,
+  initialView?: VWorld2DInitialView,
 ): VWorldMap {
-  const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
-  const position = { center, zoom: 7, rotation: 0 };
+  const center = runtime.ol.proj.fromLonLat(
+    initialView ? [...initialView.center] as [number, number] : [127.5, 36.5],
+    "EPSG:900913",
+  );
+  const position = { center, zoom: initialView?.zoom ?? 7, rotation: 0 };
   const map = new runtime.vw.ol3.Map(containerId, {
     basemapType: resolveVWorldBasemapType(runtime, basemapType),
     controlDensity: runtime.vw.ol3.DensityType.BASIC,

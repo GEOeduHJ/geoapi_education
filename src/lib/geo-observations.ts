@@ -2,6 +2,7 @@ import { hasSupabaseClientConfig } from "./env";
 
 export const KOSIS_SNAPSHOT_SCHEMA = "kosis-statistics-v1";
 export const AIRKOREA_SNAPSHOT_SCHEMA = "airkorea-sido-v1";
+export const WORLD_BANK_SNAPSHOT_SCHEMA = "worldbank-indicator-v1";
 export const MAX_PUBLIC_KOSIS_OBSERVATIONS = 2_000;
 
 export interface PublicSourceSnapshot {

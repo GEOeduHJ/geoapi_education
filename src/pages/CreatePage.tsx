@@ -14,12 +14,14 @@ import { useDatasetCatalog, getDatasetIndicators, type DatasetScope } from "../l
 import { getKosisDimensions } from "../lib/kosis-dimensions";
 import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
 import { fetchForecast, groupForecastByTime, resolveForecastBase, toForecastGrid } from "../lib/forecast";
-import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
+import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, WORLD_BANK_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
+import { ISO_ALPHA3_TO_M49 } from "../lib/iso-codes";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { AIRKOREA_SIDO_TO_SGIS_ADM_CD, KOSIS_SGG_TO_SGIS_ADM_CD, TOUR_AREA_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
 import { toPoiPoints } from "../lib/tourapi-adapter";
 import { Poi2DWorkspace } from "../components/Poi2DWorkspace";
 import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
+import { fetchWorldBoundaries } from "../lib/world-boundaries";
 import { toNormalizedRecords, toMapLayerSpec } from "../lib/kma-adapter";
 
 const EMPTY_PUBLIC_KOSIS_DATASET: PublicKosisDataset = {
@@ -115,9 +117,12 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [sgisBoundaryStatus, setSgisBoundaryStatus] = useState<SgisBoundaryPanelStatus>("idle");
   const [sgisBoundaries, setSgisBoundaries] = useState<SgisBoundaryResponse | null>(null);
   const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
-  const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
-  const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
-  const [kosisYear, setKosisYear] = useState("");
+  const [worldBoundaries, setWorldBoundaries] = useState<SgisBoundaryResponse | null>(null);
+  const [worldBoundaryStatus, setWorldBoundaryStatus] = useState<SgisBoundaryPanelStatus>("idle");
+  const [worldBoundaryError, setWorldBoundaryError] = useState<string | null>(null);
+  const [snapshotStatus, setSnapshotStatus] = useState<KosisPanelStatus>("idle");
+  const [snapshotDataset, setSnapshotDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
+  const [snapshotYear, setSnapshotYear] = useState("");
   const [indicatorKey, setIndicatorKey] = useState("");
   const [dimSelections, setDimSelections] = useState<Record<string, string>>({});
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
@@ -127,12 +132,16 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const datasets = useDatasetCatalog(scope);
   const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
   const isKma = datasetKey === "kma-asos-climate-10y";
-  const isSnapshotDataset = isDomestic && !isThreeD && (dataset?.provider === "KOSIS" || dataset?.provider === "에어코리아");
-  const isPoiDataset = isDomestic && !isThreeD && dataset?.kind === "point";
-  const snapshotSchema = dataset?.provider === "에어코리아" ? AIRKOREA_SNAPSHOT_SCHEMA : KOSIS_SNAPSHOT_SCHEMA;
+  const isSnapshotDataset = !isThreeD && dataset?.status === "ready" && dataset?.storage === "supabase" && dataset?.kind === "polygon" && !isKma;
+  const isPoiDataset = !isThreeD && dataset?.kind === "point";
+  const snapshotSchema = dataset?.provider === "에어코리아"
+    ? AIRKOREA_SNAPSHOT_SCHEMA
+    : dataset?.provider === "World Bank"
+      ? WORLD_BANK_SNAPSHOT_SCHEMA
+      : KOSIS_SNAPSHOT_SCHEMA;
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
-  const kosisIndicators = useMemo(() => (dataset ? getDatasetIndicators(dataset) : []), [dataset]);
-  const effectiveIndicator = kosisIndicators.find((entry) => entry.key === indicatorKey) ?? kosisIndicators[0] ?? null;
+  const snapshotIndicators = useMemo(() => (dataset ? getDatasetIndicators(dataset) : []), [dataset]);
+  const effectiveIndicator = snapshotIndicators.find((entry) => entry.key === indicatorKey) ?? snapshotIndicators[0] ?? null;
   const indicatorSnapshotId = effectiveIndicator?.snapshotId ?? dataset?.snapshotId ?? null;
   const kosisDimensions = useMemo(
     () => getKosisDimensions(datasetKey, effectiveIndicator?.key ?? ""),
@@ -142,102 +151,134 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   useEffect(() => {
     setDatasetKey(isDomestic ? "kma-asos-climate-10y" : "world-bank-population-density");
     setBoundaryCode("");
-    setKosisYear("");
+    setSnapshotYear("");
     setIndicatorKey("");
     setDimSelections({});
     setSelectedPoiId(null);
   }, [isDomestic]);
 
   useEffect(() => {
-    if (isThreeD || !isDomestic) {
+    if (isThreeD) {
       setSgisBoundaryStatus("idle");
       setSgisBoundaries(null);
       setSgisBoundaryError(null);
-      setKosisStatus("idle");
-      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+      setWorldBoundaryStatus("idle");
+      setWorldBoundaries(null);
+      setWorldBoundaryError(null);
+      setSnapshotStatus("idle");
+      setSnapshotDataset(EMPTY_PUBLIC_KOSIS_DATASET);
       return;
     }
 
     let cancelled = false;
-    setSgisBoundaryStatus("loading");
-    setSgisBoundaries(null);
-    setSgisBoundaryError(null);
-    if (isSnapshotDataset || isPoiDataset) {
-      setKosisStatus("loading");
-      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+    if (isDomestic) {
+      setSgisBoundaryStatus("loading");
+      setSgisBoundaries(null);
+      setSgisBoundaryError(null);
+      setWorldBoundaryStatus("idle");
+      setWorldBoundaries(null);
+      setWorldBoundaryError(null);
     } else {
-      setKosisStatus("idle");
-      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+      setWorldBoundaryStatus("loading");
+      setWorldBoundaries(null);
+      setWorldBoundaryError(null);
+      setSgisBoundaryStatus("idle");
+      setSgisBoundaries(null);
+      setSgisBoundaryError(null);
+    }
+    if (isSnapshotDataset || isPoiDataset) {
+      setSnapshotStatus("loading");
+      setSnapshotDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+    } else {
+      setSnapshotStatus("idle");
+      setSnapshotDataset(EMPTY_PUBLIC_KOSIS_DATASET);
     }
 
     const load = async () => {
-      const boundaryResult = await fetchSgisBoundaries(buildDomesticSidoBoundaryQuery());
-      if (cancelled) return;
-      setSgisBoundaries(boundaryResult.data);
-      setSgisBoundaryError(boundaryResult.error);
-      setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
+      if (isDomestic) {
+        const boundaryResult = await fetchSgisBoundaries(buildDomesticSidoBoundaryQuery());
+        if (cancelled) return;
+        setSgisBoundaries(boundaryResult.data);
+        setSgisBoundaryError(boundaryResult.error);
+        setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
+      } else {
+        const boundaryResult = await fetchWorldBoundaries();
+        if (cancelled) return;
+        setWorldBoundaries(boundaryResult.data);
+        setWorldBoundaryError(boundaryResult.error);
+        setWorldBoundaryStatus(boundaryResult.error ? "error" : "ready");
+      }
       if (!isSnapshotDataset && !isPoiDataset) return;
       const kosisResult = indicatorSnapshotId
         ? await fetchPublicKosisDataset(indicatorSnapshotId, snapshotSchema)
         : await fetchLatestPublicKosisDataset(snapshotSchema);
       if (cancelled) return;
-      setKosisDataset(kosisResult);
-      setKosisStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
+      setSnapshotDataset(kosisResult);
+      setSnapshotStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
     };
     load().catch(() => {
       if (cancelled) return;
-      setSgisBoundaryStatus("error");
-      setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
+      if (isDomestic) {
+        setSgisBoundaryStatus("error");
+        setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
+      } else {
+        setWorldBoundaryStatus("error");
+        setWorldBoundaryError("WORLD_BOUNDARY_REQUEST_FAILED");
+      }
       if (isSnapshotDataset || isPoiDataset) {
-        setKosisStatus("error");
-        setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
+        setSnapshotStatus("error");
+        setSnapshotDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
       }
     });
     return () => { cancelled = true; };
   }, [isDomestic, isSnapshotDataset, isPoiDataset, isThreeD, indicatorSnapshotId, snapshotSchema]);
 
+  const activeBoundaries = isDomestic ? sgisBoundaries : worldBoundaries;
+  const activeBoundaryStatus = isDomestic ? sgisBoundaryStatus : worldBoundaryStatus;
+  const activeBoundaryError = isDomestic ? sgisBoundaryError : worldBoundaryError;
+
   const visibleBoundaries = useMemo<SgisBoundaryResponse | null>(() => {
-    if (!sgisBoundaries || !boundaryCode) return sgisBoundaries;
+    if (!activeBoundaries || !boundaryCode) return activeBoundaries;
     return {
-      ...sgisBoundaries,
+      ...activeBoundaries,
       data: {
-        ...sgisBoundaries.data,
-        features: sgisBoundaries.data.features.filter((feature) => feature.properties.adm_cd === boundaryCode),
+        ...activeBoundaries.data,
+        features: activeBoundaries.data.features.filter((feature) => feature.properties.adm_cd === boundaryCode),
       },
     };
-  }, [boundaryCode, sgisBoundaries]);
+  }, [boundaryCode, activeBoundaries]);
 
-  const dimFilteredKosisObservations = useMemo(() => {
-    let rows = kosisDataset.observations;
+  const dimFilteredSnapshotObservations = useMemo(() => {
+    let rows = snapshotDataset.observations;
     for (const dimension of kosisDimensions) {
       rows = filterObservationsByClassification(rows, dimension.level, dimSelections[dimension.key] ?? "");
     }
     return rows;
-  }, [kosisDataset.observations, kosisDimensions, dimSelections]);
+  }, [snapshotDataset.observations, kosisDimensions, dimSelections]);
 
-  const availableKosisYears = useMemo(
-    () => listObservationYears(dimFilteredKosisObservations),
-    [dimFilteredKosisObservations],
+  const availableSnapshotYears = useMemo(
+    () => listObservationYears(dimFilteredSnapshotObservations),
+    [dimFilteredSnapshotObservations],
   );
-  const effectiveKosisYear = availableKosisYears.includes(kosisYear) ? kosisYear : (availableKosisYears[0] ?? "");
-  const yearFilteredKosisObservations = useMemo(
-    () => aggregateObservationsByRegion(effectiveKosisYear ? filterObservationsByYear(dimFilteredKosisObservations, effectiveKosisYear) : dimFilteredKosisObservations),
-    [dimFilteredKosisObservations, effectiveKosisYear],
+  const effectiveSnapshotYear = availableSnapshotYears.includes(snapshotYear) ? snapshotYear : (availableSnapshotYears[0] ?? "");
+  const filteredSnapshotObservations = useMemo(
+    () => aggregateObservationsByRegion(effectiveSnapshotYear ? filterObservationsByYear(dimFilteredSnapshotObservations, effectiveSnapshotYear) : dimFilteredSnapshotObservations),
+    [dimFilteredSnapshotObservations, effectiveSnapshotYear],
   );
 
   const boundaryJoin = useMemo(
-    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, yearFilteredKosisObservations, { codeMap: { ...KOSIS_SGG_TO_SGIS_ADM_CD, ...AIRKOREA_SIDO_TO_SGIS_ADM_CD } }),
-    [yearFilteredKosisObservations, visibleBoundaries],
+    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, filteredSnapshotObservations, { codeMap: { ...KOSIS_SGG_TO_SGIS_ADM_CD, ...AIRKOREA_SIDO_TO_SGIS_ADM_CD, ...ISO_ALPHA3_TO_M49 } }),
+    [filteredSnapshotObservations, visibleBoundaries],
   );
 
   const poiObservations = useMemo(() => {
     if (!isPoiDataset) return [];
-    if (!boundaryCode) return kosisDataset.observations;
-    return kosisDataset.observations.filter((observation) => {
+    if (!boundaryCode) return snapshotDataset.observations;
+    return snapshotDataset.observations.filter((observation) => {
       const areaCode = typeof observation.attributes.area_code === "string" ? observation.attributes.area_code : "";
       return (TOUR_AREA_TO_SGIS_ADM_CD[areaCode] ?? "") === boundaryCode;
     });
-  }, [isPoiDataset, kosisDataset.observations, boundaryCode]);
+  }, [isPoiDataset, snapshotDataset.observations, boundaryCode]);
 
   const poiPoints = useMemo(
     () => (isPoiDataset ? toPoiPoints(poiObservations) : null),
@@ -266,12 +307,12 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
 
   const boundaryNames = useMemo(() => {
     const names: Record<string, string> = {};
-    for (const feature of sgisBoundaries?.data.features ?? []) {
+    for (const feature of activeBoundaries?.data.features ?? []) {
       const code = feature.properties.adm_cd?.trim();
       if (code && feature.properties.adm_nm) names[code] = feature.properties.adm_nm;
     }
     return names;
-  }, [sgisBoundaries]);
+  }, [activeBoundaries]);
 
   // KMA 데이터를 행정경계별로 집계해서 choropleth 데이터 생성
   const kmaAggregatedBoundaryValues = useMemo<Record<string, BoundaryJoinValue> | null>(() => {
@@ -306,7 +347,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     [climateState, visibleStationIds],
   );
 
-  const boundaryOptions = sgisBoundaries?.data.features ?? [];
+  const boundaryOptions = activeBoundaries?.data.features ?? [];
   const selectedBoundaryName = boundaryOptions.find((feature) => feature.properties.adm_cd === boundaryCode)?.properties.adm_nm;
 
   async function handleForecastClick(lon: number, lat: number) {
@@ -347,7 +388,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             <div className="map-stage__center"><span className="map-stage__pin">＋</span><strong>3D 렌더러 연결 대기</strong><p>2D 국내·세계 지도에서 실제 자료의 지도·그래프·표 계약을 먼저 완성합니다.</p></div>
             <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
           </div>
-        ) : isDomestic ? (
+        ) : (
           <div className="map-stage map-stage--live" ref={mapExportRef}>
             <VWorld2DMap
               boundaries={visibleBoundaries}
@@ -356,7 +397,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                 isKma && kmaAggregatedBoundaryValues ? kmaAggregatedBoundaryValues :
                 null
               }
-              boundaryValueLabel={isSnapshotDataset ? "공개값" : isKma ? "KMA 경계별 평균" : "경계값"}
+              boundaryValueLabel={isSnapshotDataset ? (effectiveIndicator && effectiveIndicator.key !== "default" ? effectiveIndicator.label : "공개값") : isKma ? "KMA 경계별 평균" : "경계값"}
               stationValues={null}
               visibleStationIds={[]}
               showStations={false}
@@ -365,16 +406,17 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
               selectedPoi={selectedPoiDetail}
               forecastMode={forecastMode}
               onForecastClick={handleForecastClick}
+              worldView={!isDomestic}
+              boundaryScopeLabel={isDomestic ? "SGIS 시도 경계" : "세계 국가 경계"}
+              boundaryCaptionTag={isDomestic ? "SGIS BOUNDARY" : "WORLD BOUNDARIES"}
             />
           </div>
-        ) : (
-          <div className="map-stage map-stage--empty map-stage--planned"><div className="map-stage__grid" /><div className="map-stage__center"><span className="map-stage__pin">◎</span><strong>세계 2D 데이터셋 준비 중</strong><p>World Bank 국가 geometry와 지표 snapshot을 연결하면 이 공간에서 단계구분도를 제공합니다.</p></div></div>
         )}
         <aside className="workspace-sidebar">
           <div className="sidebar-section">
             <p className="eyebrow">01 · QUERY</p>
             <h3>{scope === "domestic" ? "자료·조건 선택" : "세계 자료 선택"}</h3>
-            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); setIndicatorKey(""); setDimSelections({}); setSelectedPoiId(null); }} />
+            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setSnapshotYear(""); setIndicatorKey(""); setDimSelections({}); setSelectedPoiId(null); }} />
             {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
             {!isThreeD && isDomestic && isKma && (
               <>
@@ -389,11 +431,11 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             )}
             {(isSnapshotDataset || isPoiDataset) && (
               <>
-                {kosisIndicators.length > 1 && (
+                {snapshotIndicators.length > 1 && (
                   <>
                     <label className="field-label" htmlFor="query-indicator">{isPoiDataset ? "지역" : "지표"}</label>
-                    <select id="query-indicator" value={effectiveIndicator?.key ?? ""} onChange={(event) => { setIndicatorKey(event.target.value); setKosisYear(""); setDimSelections({}); setSelectedPoiId(null); setSelectedPoiId(null); }}>
-                      {kosisIndicators.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}{entry.unit ? ` (${entry.unit})` : ""}</option>)}
+                    <select id="query-indicator" value={effectiveIndicator?.key ?? ""} onChange={(event) => { setIndicatorKey(event.target.value); setSnapshotYear(""); setDimSelections({}); setSelectedPoiId(null); setSelectedPoiId(null); }}>
+                      {snapshotIndicators.map((entry) => <option key={entry.key} value={entry.key}>{entry.label}{entry.unit ? ` (${entry.unit})` : ""}</option>)}
                     </select>
                   </>
                 )}
@@ -413,10 +455,10 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                 {isSnapshotDataset && (
                   <>
                     <label className="field-label" htmlFor="kosis-year">연도</label>
-                    <select id="kosis-year" value={effectiveKosisYear} onChange={(event) => setKosisYear(event.target.value)} disabled={availableKosisYears.length === 0}>
-                      {availableKosisYears.length === 0
+                    <select id="kosis-year" value={effectiveSnapshotYear} onChange={(event) => setSnapshotYear(event.target.value)} disabled={availableSnapshotYears.length === 0}>
+                      {availableSnapshotYears.length === 0
                         ? <option value="">연도 불러오는 중…</option>
-                        : availableKosisYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                        : availableSnapshotYears.map((year) => <option key={year} value={year}>{year}</option>)}
                     </select>
                     <small className="field-help">선택한 연도의 값으로 지도·그래프·자료표가 함께 갱신됩니다.</small>
                   </>
@@ -426,24 +468,35 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
                 )}
               </>
             )}
-            {!isThreeD && isDomestic && (
+            {!isThreeD && (
               <>
-                <div className="control-row"><span>지도 클릭 예보 조회</span><button className={`toggle${forecastMode ? " is-on" : ""}`} type="button" aria-pressed={forecastMode} aria-label="지도 클릭 예보 조회" onClick={() => setForecastMode((value) => !value)}><i /></button></div>
-                {forecastMode && <small className="field-help">지도의 빈 곳을 클릭하면 5km 격자 단기예보를 조회합니다.</small>}
-                <label className="field-label" htmlFor="boundary-filter">지도에 표시할 시도</label>
-                <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
-                  <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
+                {isDomestic && (
+                  <>
+                    <div className="control-row"><span>지도 클릭 예보 조회</span><button className={`toggle${forecastMode ? " is-on" : ""}`} type="button" aria-pressed={forecastMode} aria-label="지도 클릭 예보 조회" onClick={() => setForecastMode((value) => !value)}><i /></button></div>
+                    {forecastMode && <small className="field-help">지도의 빈 곳을 클릭하면 5km 격자 단기예보를 조회합니다.</small>}
+                  </>
+                )}
+                <label className="field-label" htmlFor="boundary-filter">{isDomestic ? "지도에 표시할 시도" : "지도에 표시할 국가"}</label>
+                <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={activeBoundaryStatus !== "ready"}>
+                  <option value="">{isDomestic ? `전체 시도 · ${boundaryOptions.length || "-"}개` : `전체 국가 · ${boundaryOptions.length || "-"}개`}</option>
                   {boundaryOptions.map((feature) => <option key={feature.properties.adm_cd ?? feature.properties.adm_nm} value={feature.properties.adm_cd ?? ""}>{feature.properties.adm_nm ?? feature.properties.adm_cd ?? "이름 없음"}</option>)}
                 </select>
-                <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 시도를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
-                <small className="field-help">국내 2D는 시도 단위로 고정합니다. 시군구·행정동은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않습니다.</small>
-                {sgisBoundaryStatus === "loading" && <small className="field-help">SGIS 경계 목록을 불러오는 중입니다…</small>}
-                {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
+                {isDomestic ? (
+                  <>
+                    <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 시도를 표시합니다. 특정 시도를 고르면 KMA 지점과 공개값도 같은 범위로 제한합니다."}</small>
+                    <small className="field-help">국내 2D는 시도 단위로 고정합니다. 시군구·행정동은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않습니다.</small>
+                  </>
+                ) : (
+                  <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 국가를 표시합니다. 특정 국가를 고르면 그래프·자료표도 같은 범위로 제한합니다."}</small>
+                )}
+                {!isDomestic && <small className="field-help">세계 경계: Natural Earth 50m (world-atlas v2, public domain).</small>}
+                {activeBoundaryStatus === "loading" && <small className="field-help">경계 목록을 불러오는 중입니다…</small>}
+                {activeBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
               </>
             )}
-            {!isThreeD && (isSnapshotDataset || isPoiDataset) && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
-            {!isThreeD && (isSnapshotDataset || isPoiDataset) && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
-            {!isThreeD && isSnapshotDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
+            {!isThreeD && (isSnapshotDataset || isPoiDataset) && <KosisPublicSnapshotPanel status={snapshotStatus} dataset={snapshotDataset} providerLabel={dataset?.provider} />}
+            {!isThreeD && isDomestic && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
+            {!isThreeD && isSnapshotDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={snapshotStatus === "loading" || activeBoundaryStatus === "loading"} error={snapshotDataset.error ?? activeBoundaryError} providerLabel={dataset?.provider} />}
           </div>
           <div className="sidebar-section">
             <p className="eyebrow">02 · REPRESENTATION</p>
@@ -461,8 +514,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
-      {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} selectedYear={effectiveKosisYear} exportSlug={datasetKey} />}
-      {isPoiDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} observations={poiObservations} error={kosisDataset.error ?? sgisBoundaryError} exportSlug={datasetKey} />}
+      {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={snapshotDataset.error ?? sgisBoundaryError} selectedYear={effectiveSnapshotYear} exportSlug={datasetKey} />}
+      {isPoiDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} observations={poiObservations} error={snapshotDataset.error ?? sgisBoundaryError} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && forecast && <ForecastPanel result={forecast} onClose={() => setForecast(null)} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>

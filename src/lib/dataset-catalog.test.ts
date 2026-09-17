@@ -21,7 +21,7 @@ describe("curated dataset catalog", () => {
 
   it("marks only datasets with verified stored data as ready", () => {
     const ready = DATASET_CATALOG.filter((dataset) => dataset.status === "ready");
-    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count", "airkorea-station-daily", "tourapi-area-attractions"]);
+    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count", "airkorea-station-daily", "world-bank-population-density", "tourapi-area-attractions"]);
     expect(getDataset("tourapi-area-attractions")).toMatchObject({
       scope: "domestic",
       provider: "한국관광공사",
@@ -30,7 +30,15 @@ describe("curated dataset catalog", () => {
       capabilities: ["map", "table"],
     });
     expect(getDataset("kosis-sido-city-park-per-capita")?.storage).toBe("supabase");
-    expect(getDataset("world-bank-population-density")?.status).toBe("planned");
+    expect(getDataset("world-bank-population-density")).toMatchObject({
+      scope: "world",
+      provider: "World Bank",
+      status: "ready",
+      kind: "polygon",
+      capabilities: ["map", "chart", "table"],
+      period: { min: "2018", max: "2024" },
+    });
+    expect(getDataset("open-meteo-city-climate")?.status).toBe("planned");
   });
 
   it("keeps the ready KMA dataset's declared period in sync with the chart's actual DB coverage bounds", () => {
