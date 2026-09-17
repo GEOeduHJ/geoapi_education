@@ -44,6 +44,7 @@ interface Ws3dViewer {
     flyTo(options: Record<string, unknown>): void;
   };
   scene: { globe?: unknown };
+  resize?(): void;
 }
 
 interface VwMap3D {
@@ -54,6 +55,7 @@ interface VwMap3D {
   setNavigationZoomVisible?(visible: boolean): void;
   start?(): void;
   destroy?(): void;
+  updateSize?(): void;
 }
 
 interface VwNamespace3D {
@@ -211,6 +213,7 @@ export function getViewer(): Ws3dViewer | null {
 
 export interface VWorld3DMap {
   viewer: Ws3dViewer;
+  refreshSize(): void;
   dispose(): void;
 }
 
@@ -278,6 +281,18 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
   }
     return {
       viewer,
+      refreshSize() {
+        try {
+          viewer.resize?.();
+        } catch {
+          /* ignore */
+        }
+        try {
+          map.updateSize?.();
+        } catch {
+          /* ignore */
+        }
+      },
       dispose() {
         try {
           viewer.entities.removeAll();

@@ -111,6 +111,8 @@ export function VWorld3DMap() {
           handle = created;
         }
         renderMode(handle, boundaryResult.data, snapshotResult, modeRef.current, heightScaleRef.current);
+        handle.refreshSize();
+        window.setTimeout(() => mapRef.current?.refreshSize(), 1000);
         setStatus("ready");
       })
       .catch((failure) => {
@@ -176,6 +178,22 @@ export function VWorld3DMap() {
   }
 
   useEffect(() => {
+    const element = mapElementRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.refreshSize();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handle = mapRef.current;
+    if (!handle) return;
+    handle.refreshSize();
+  });
+
+  useEffect(() => {
     const handle = mapRef.current;
     if (!handle || !boundariesRef.current) return;
     renderMode(handle, boundariesRef.current, datasetRef.current, modeRef.current, heightScale);
@@ -194,7 +212,7 @@ export function VWorld3DMap() {
 
   return (
     <div className="vworld-map-workspace">
-      <div className="vworld-map-frame" style={{ minHeight: 520 }}>
+      <div className="vworld-map-frame vworld-map-frame--3d" style={{ minHeight: 520 }}>
         <div id={mapId} ref={mapElementRef} className="vworld-map" role="application" aria-label="VWorld 3D 지도" />
         <div className="vworld-map-caption">
           <span>VWORLD 3D · {isQuake ? "QUAKE" : "PRISM"}</span>
