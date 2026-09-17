@@ -490,7 +490,7 @@ git log --oneline -5
 | 2026-09-18 | OpenCode | 3D-01f: start 전 초기화 순서 완성 | `df31afe` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-01g: start 원본 에러 노출 (원인 식별용) | `9910dec` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-01h: jQuery 선행 로드 ($ is not defined) | `7d540c3` | typecheck/test(139)/build 통과 |
-| 2026-09-18 | OpenCode | 3D-02: 위젯 정리·지진 기둥·자료 전환 | 미커밋 로컬 변경 | typecheck/test(139)/build 통과 |
+| 2026-09-18 | OpenCode | 3D-02: 위젯 정리·지진 기둥·자료 전환 | `75486e7` | typecheck/test(139)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 
