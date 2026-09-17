@@ -139,6 +139,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: KOSIS 그래프·표·provenance 연결 (국내 완성 잔여)
 - 커밋: `12402f4 feat: sido-only boundary contract, KOSIS public snapshot and crosswalk join`에 포함
 
+### 2026-09-17 — OpenCode — KOSIS-VIZ (그래프·표·provenance 연결)
+
+- 결과: 완료
+- 변경: `src/lib/kosis-adapter.ts`(신규), `src/lib/kosis-adapter.test.ts`(신규 4개), `src/components/Kosis2DWorkspace.tsx`(신규), `src/pages/CreatePage.tsx`(KOSIS 선택 시 연결), `src/lib/dataset-catalog.ts`+테스트(KOSIS `capabilities` 복원), `docs/AI_HANDOFF.md`
+- 결정/데이터: 공개 snapshot 17행이 단일 지표·시점·단위임을 이용해 join값을 순위 정렬 NormalizedRecord로 변환하고 ChartSpec·TableModel·Provenance를 같은 집합에서 생성. 경계 필터(전체/특정 시도)가 지도·그래프·표에 함께 반영됨. CSV 파일명 `geolab-2d-kosis-park`
+- 검증: `npm run typecheck` 통과, `npm test` 통과(19개 파일·85개 테스트), `npm run build` 통과, 로컬 dev 서버 `/create/2d/domestic` 200
+- 브라우저/API: 렌더 수준 미확인(이 세션 브라우저 도구 없음). 배포 후 KOSIS 선택 시 17개 순위 그래프·표·CSV·provenance 확인 필요. 추가 API 호출 없음
+- 차단/주의: 없음
+- 다음 작업: Production `/create/2d/domestic`에서 KMA·KOSIS 전환 렌더 확인 후 국내 완성 선언, 이후 2D-04 착수 여부 결정
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

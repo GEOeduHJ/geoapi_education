@@ -192,8 +192,8 @@ npm run build
 | 단계 | 상태 | 다음 산출물 |
 |---|---|---|
 | Phase 0 | 1차 완료 | KOSIS/세계 adapter와 공통 시각화 타입 확장 |
-| Phase 1 | 진행 중 | provenance 패널·DB coverage 선택·공통 export/표 계약 보강 |
-| Phase 2 | 대기 | KOSIS 승인 snapshot과 실제 주제도 |
+| Phase 1 | 완료 | KMA 지도·그래프·표·export·provenance, 시도 경계 필터 (브라우저 재확인 잔여) |
+| Phase 2 | 완료 | KOSIS 승인 snapshot 공개, 17/17 조인, 단계구분도·순위 그래프·표·CSV·provenance (브라우저 재확인 잔여) |
 | Phase 3 | 대기 | World Bank 세계 자료 |
 | Phase 4 | 대기 | 확장 provider adapters |
 | Phase 5 | 차단 | 2D 완료 gate 이후 3D |

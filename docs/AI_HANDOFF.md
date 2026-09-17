@@ -299,9 +299,17 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 - `--write` 후 checksum과 snapshot ID를 기록하고, 검증 후에만 `published`로 전환한다.
 - 조건부 단계구분도, 지역 순위/시계열, 표, provenance, 선택 경계 필터를 실제 KOSIS 값으로 확인한다.
 
-**상태 (2026-09-17, 완료):** 후보(`101/DT_1YL21281/T10/2025`) 확정, DRY-RUN 17행·단일 시점·단일 단위·결측 0 확인, 공식 대응표(`1224→24`, `1236→36`)로 17/17 조인 설계 완료. `codeMap` crosswalk를 `geo-join`·`CreatePage`·조인 패널에 연결. 사용자가 `0005`(적용済 확인 — policy 중복 에러로 기존 적용 판명)/`0006`(적용 성공)을 SQL Editor에서 실행한 뒤, `--write`→검증→`--write --public` 순서로 적재·공개 완료. snapshot ID `b0f7f9c9-a796-46fc-b275-66a0a1ea55e0`, 17행, anon 공개 읽기·실측 SGIS 17경계 조인(`ready` 17/17) 검증済. 실측 중 `PRD_SE="A"` 연간 처리와 checksum 통일(`buildSnapshotChecksum`)을 수정. 정적 카탈로그의 KOSIS 항목을 `ready`로 전환하되 그래프·표 UI가 아직 없어 `capabilities`는 `["map"]`으로 정직하게 표기. KOSIS 그래프·표·provenance 연결은 국내 완성 잔여 작업으로 분리. 상세는 `docs/KOSIS_ADAPTER.md` 참조.
+**상태 (2026-09-17, 완료):** 후보(`101/DT_1YL21281/T10/2025`) 확정, DRY-RUN 17행·단일 시점·단일 단위·결측 0 확인, 공식 대응표(`1224→24`, `1236→36`)로 17/17 조인 설계 완료. `codeMap` crosswalk를 `geo-join`·`CreatePage`·조인 패널에 연결. 사용자가 `0005`(적용済 확인 — policy 중복 에러로 기존 적용 판명)/`0006`(적용 성공)을 SQL Editor에서 실행한 뒤, `--write`→검증→`--write --public` 순서로 적재·공개 완료. snapshot ID `b0f7f9c9-a796-46fc-b275-66a0a1ea55e0`, 17행, anon 공개 읽기·실측 SGIS 17경계 조인(`ready` 17/17) 검증済. 실측 중 `PRD_SE="A"` 연간 처리와 checksum 통일(`buildSnapshotChecksum`)을 수정. 정적 카탈로그의 KOSIS 항목은 `ready`이며, 그래프·표·provenance는 KOSIS-VIZ에서 연결했다. 상세는 `docs/KOSIS_ADAPTER.md` 참조.
 
 **완료 기준:** 승인 dataset에서 “공개 snapshot이 아직 없습니다”가 사라지고, 조인 실패가 있으면 원인과 미일치 코드가 화면에 나온다.
+
+### KOSIS-VIZ — KOSIS 그래프·표·provenance 연결 (완료, 2026-09-17)
+
+**목적:** 국내 완성의 잔여였던 KOSIS 그래프·표·provenance를 지도와 동일한 조회 조건으로 연결한다.
+
+**완료 내용:** `src/lib/kosis-adapter.ts`(join값→순위 정렬 NormalizedRecord·ChartSpec·TableModel·Provenance) + `src/components/Kosis2DWorkspace.tsx`(그래프/표 토글·PNG/PDF/CSV·ProvenancePanel·조인 실패 사유 표시) 신규, `CreatePage.tsx`에서 KOSIS 선택 시 연결(경계 필터가 좁혀지면 그래프·표도 같은 집합으로 축소). 정적 카탈로그 KOSIS `capabilities`를 `["map","chart","table"]`로 복원.
+
+**검증:** `npm run typecheck` 통과, `npm test` 통과(19개 파일·85개 테스트, 신규 4개), `npm run build` 통과, 로컬 dev 서버 `/create/2d/domestic` 200. 렌더 수준 확인은 브라우저 도구 부재로 미실시 — 배포 후 KOSIS 선택 시 17개 순위 그래프·표·CSV·provenance 1회 확인 필요.
 
 ### 2D-04 — World Bank 세계 2D 수직 슬라이스 (보류: 국내 완성 후)
 
@@ -377,6 +385,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | 2D-03: DT_1YL21281 대응표 확정·DRY-RUN·crosswalk 연결 (적재 전) | `12402f4` | typecheck/test(79)/build 통과, 0005 적용 확인 후 --write 대기 |
 | 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | `12402f4` | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
 | 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | `12402f4` | typecheck/test(81)/build 통과 |
+| 2026-09-17 | OpenCode | KOSIS-VIZ: 그래프·표·provenance 연결, capabilities 복원 | 미커밋 로컬 변경 | typecheck/test(85)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위
 

@@ -5,6 +5,7 @@ import { ClimateComparison } from "../components/ClimateComparison";
 import { DatasetSelector } from "../components/DatasetSelector";
 import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
+import { Kosis2DWorkspace } from "../components/Kosis2DWorkspace";
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
@@ -327,6 +328,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} onMetricChange={setMetric} onFromChange={setFrom} onToChange={setTo} state={climateViewState} />}
+      {!isThreeD && isDomestic && isKosis && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

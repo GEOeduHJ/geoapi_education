@@ -7,6 +7,7 @@ describe("curated dataset catalog", () => {
     expect(getDatasets("domestic").every((dataset) => dataset.scope === "domestic")).toBe(true);
     expect(getDatasets("world").every((dataset) => dataset.scope === "world")).toBe(true);
     expect(getDataset("kma-asos-climate-10y")?.capabilities).toEqual(["map", "chart", "table"]);
+    expect(getDataset("kosis-sido-city-park-per-capita")?.capabilities).toEqual(["map", "chart", "table"]);
   });
 
   it("marks only datasets with verified stored data as ready", () => {
