@@ -22,6 +22,7 @@
 - KMA 기후 정규화 migration 구현: `climate_stations`, `climate_daily_observations`, 공개 SELECT RLS, 명시적 public snapshot
 - KMA 장기 조회용 월별 요약 view 구현·적용: `climate_period_summaries`, 유효 관측일수 기반 가중 평균 계약
 - `/create/chart`에 Supabase 기반 KMA 기후 비교 화면 구현: 지표·기간 선택, 관측소별 평균, 유효 관측일수, 빈 자료·오류 상태
+- `/create/chart` 기후 비교 자료에 현재 차트를 PNG 이미지·A4 PDF로 내보내는 기능 구현: 캡처 시 조작 패널 제외, 내보내기 라이브러리 지연 로드
 - `/create/2d`에 VWorld 2D 로더와 KMA ASOS 관측소 레이어 구현: 지도 클릭 시 지점번호·좌표·고도 확인, 지도 실패 시 안내 fallback
 - KOSIS 서버 adapter 구현: 통계표 검색·분류/항목 메타데이터·제한된 통계값 조회, KOSIS 키 서버 전용 유지, 통계부호·결측 원문 보존
 - KOSIS controlled snapshot 수집기 구현: DRY-RUN/`--write`/`--public` 분리, 원자료·metadata·요청정보·checksum 보존, `geo_observations` 중복 적재 방지 migration
@@ -29,6 +30,8 @@
 - SGIS 행정구역경계 서버 adapter·클라이언트 상태 패널 구현: 서버 전용 토큰, 2025 시도 경계 조회, EPSG:5179 원본 좌표계와 코드 확인
 - SGIS 2025 시도 경계를 VWorld 2D의 EPSG:900913 면 레이어로 변환·표시: KOSIS 선택 시 상태 패널과 지도에 동일 응답을 공유하며, 값 결합 없는 기준경계로만 렌더링
 - VWorld 2D 지도 배경 선택 구현: 레이어 가독성을 위한 백지도 기본값과 기본도(도로)·야간지도·항공사진·항공사진+표시를 지도 재초기화 없이 전환하고, 범례의 배경명을 현재 선택과 동기화
+- KOSIS 자료 선택 UI 개선: 검색 결과·분류·항목을 실제 옵션이 있는 드롭다운으로 선택하고, 선택한 통계표 수록기간의 최소·최대 시점만 시작·종료 드롭다운에 제공
+- 2D 지도자료에 현재 화면을 PNG 이미지·A4 PDF로 내보내는 기능 구현: VWorld 배경·분석 레이어·범례는 포함하고 배경 선택 컨트롤은 제외
 - KOSIS 공개 관측값과 SGIS 경계의 정확한 코드 조인 진단 구현: `region_code === adm_cd`만 허용하고, 중복 지역값·복수 시점·복수 단위를 `ambiguous-values`로 차단
 - 조인 상태가 `ready`인 경우에만 SGIS 면을 5단계 순차 색상으로 표시하고, 지도 범례에 공개값 수·최솟값·최댓값·단위를 표시하도록 연결
 - KOSIS 단일 분류 표 호환성 보강: `objL2=ALL`을 무조건 추가하지 않고 실제 추가 분류가 있을 때만 전달하며, 검색 미리보기는 최상위 분류값부터 사용

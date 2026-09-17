@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ClimateComparison } from "../components/ClimateComparison";
+import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { KosisTableSearch } from "../components/KosisTableSearch";
@@ -100,6 +101,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
   const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
   const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
   const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
+  const mapExportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isThreeD || source !== "kosis") {
@@ -173,7 +175,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
             <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
           </div>
         ) : (
-          <div className="map-stage map-stage--live">
+          <div className="map-stage map-stage--live" ref={mapExportRef}>
             <VWorld2DMap
               boundaries={source === "kosis" ? sgisBoundaries : null}
               boundaryValues={source === "kosis" && boundaryJoin.status === "ready" ? boundaryJoin.values : null}
@@ -212,6 +214,7 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
           </div>
         </aside>
       </section>
+      {!isThreeD && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );
 }

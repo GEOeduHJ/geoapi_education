@@ -187,6 +187,7 @@ type Map2DConfig = {
   legend: boolean;
   timeSlider?: { start: string; end: string; step: string };
   annotations?: boolean;
+  exportFormats?: Array<"png" | "pdf">;
 };
 
 type Map3DConfig = {
@@ -199,7 +200,7 @@ type Map3DConfig = {
 };
 ```
 
-현재 2D 제작기에서는 `GRAPHIC_WHITE`를 백지도의 기본값으로 사용하고, VWorld 공식 2D 배경 타입인 `GRAPHIC`, `GRAPHIC_NIGHT`, `PHOTO`, `PHOTO_HYBRID`를 선택할 수 있다. 배경을 바꾸어도 KMA 관측소·SGIS 경계·KOSIS 주제 레이어는 같은 지도 인스턴스에 남긴다. 사용자가 말하는 지형·고도 표현은 2D 배경을 지형도로 오인하지 않도록 `/create/3d`의 WebGL/Cesium 경로에서 별도로 구현한다.
+현재 2D 제작기에서는 `GRAPHIC_WHITE`를 백지도의 기본값으로 사용하고, VWorld 공식 2D 배경 타입인 `GRAPHIC`, `GRAPHIC_NIGHT`, `PHOTO`, `PHOTO_HYBRID`를 선택할 수 있다. 배경을 바꾸어도 KMA 관측소·SGIS 경계·KOSIS 주제 레이어는 같은 지도 인스턴스에 남긴다. KOSIS 검색 결과·분류·항목·시점은 실제 metadata와 통계표 수록기간에서 생성한 드롭다운으로 선택하며, 수록기간 밖의 임의 값은 요청하지 않는다. 현재 2D 지도와 기후 비교 자료의 `exportFormats`는 PNG/PDF를 지원하고 지도·차트 조작 패널은 캡처에서 제외한다. 사용자가 말하는 지형·고도 표현은 2D 배경을 지형도로 오인하지 않도록 `/create/3d`의 WebGL/Cesium 경로에서 별도로 구현한다. 3D 내보내기는 실제 렌더러와 카메라·출처 캡처 계약을 확정한 뒤 별도 추가한다.
 
 ### 5.3 2D 지도에서 우선 제공할 학습 패턴
 

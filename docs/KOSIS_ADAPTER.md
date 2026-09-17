@@ -42,6 +42,12 @@ GET /api/kosis-search?searchNm=지역별%20인구&sort=RANK&resultCount=20
 
 응답에는 통계표명·기관·`orgId`·`tblId`·수록기간·KOSIS 링크가 포함된다. 검색 결과 원자료는 서버 응답의 `raw`에 보존하지만 인증정보는 포함하지 않는다.
 
+브라우저의 선택 흐름도 같은 계약을 따른다. `/api/kosis-search` 결과는 클릭 전용 카드가 아니라
+실제 `<select>` 옵션으로 제공하고, 선택한 표의 metadata에서 분류·항목 옵션을 만든다. 시작·종료
+시점은 검색 결과의 `STRT_PRD_DE`·`END_PRD_DE`와 `PRD_SE`를 정규화해 만든 목록에서만 고른다.
+따라서 화면은 임의의 `2024` 같은 fallback 날짜를 만들지 않으며, 제공기간을 확인할 수 없는 표는
+값 조회를 실행하지 않는다. 이 제한은 UI 편의가 아니라 controlled snapshot과 동일한 재현성 계약이다.
+
 ### 2. 분류·항목 메타데이터
 
 ```text

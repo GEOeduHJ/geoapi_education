@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MaterialExportActions } from "./MaterialExportActions";
 import {
   climateMetrics,
   DEFAULT_CLIMATE_STATION_IDS,
@@ -44,6 +45,7 @@ function formatCoverage(ratio: number): string {
 }
 
 export function ClimateComparison() {
+  const exportRef = useRef<HTMLElement | null>(null);
   const [metric, setMetric] = useState<ClimateMetric>("ta_avg");
   const [from, setFrom] = useState(DEFAULT_FROM);
   const [to, setTo] = useState(DEFAULT_TO);
@@ -130,7 +132,7 @@ export function ClimateComparison() {
     : `${observations.length.toLocaleString("ko-KR")}개 일자료`;
 
   return (
-    <section className="climate-workspace" aria-labelledby="climate-comparison-title">
+    <section className="climate-workspace" ref={exportRef} aria-labelledby="climate-comparison-title">
       <div className="climate-workspace__header">
         <div>
           <p className="eyebrow">KMA ASOS · SUPABASE SNAPSHOT</p>
@@ -140,7 +142,7 @@ export function ClimateComparison() {
         <span className="climate-badge">로그인 없이 공개 조회</span>
       </div>
 
-      <div className="climate-controls" aria-label="기후자료 조건">
+      <div className="climate-controls" data-export-ignore="true" aria-label="기후자료 조건">
         <label>
           <span>비교 지표</span>
           <select value={metric} onChange={(event) => setMetric(event.target.value as ClimateMetric)}>
@@ -156,6 +158,8 @@ export function ClimateComparison() {
           <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
         </label>
       </div>
+
+      <MaterialExportActions targetRef={exportRef} fileName="geolab-climate-comparison" />
 
       {status === "loading" && <div className="climate-message" role="status">저장된 관측자료를 불러오는 중입니다…</div>}
       {status === "error" && <div className="climate-message climate-message--error" role="alert"><strong>자료를 불러오지 못했습니다.</strong><span>{describeClimateError(error)}</span><small>관리자가 `0003_kma_climate.sql`·`0004_climate_period_summaries.sql`을 실행하고 수집기를 한 번 실행했는지 확인하세요.</small></div>}

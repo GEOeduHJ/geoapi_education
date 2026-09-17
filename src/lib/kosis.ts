@@ -91,6 +91,7 @@ export interface KosisSearchResult {
   tableName: string | null;
   statId: string | null;
   statName: string | null;
+  periodType: string | null;
   contents: string | null;
   startPeriod: string | null;
   endPeriod: string | null;
@@ -459,6 +460,7 @@ export function parseKosisSearchResponse(payload: unknown): KosisSearchResult[] 
     tableName: field(row, "TBL_NM"),
     statId: field(row, "STAT_ID"),
     statName: field(row, "STAT_NM"),
+    periodType: field(row, "PRD_SE"),
     contents: field(row, "CONTENTS"),
     startPeriod: field(row, "STRT_PRD_DE"),
     endPeriod: field(row, "END_PRD_DE"),

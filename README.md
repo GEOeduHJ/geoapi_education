@@ -15,14 +15,14 @@ npm run dev
 ## 주요 경로
 
 - `/create`: 자료 제작 허브
-- `/create/2d`: VWorld 2D 지도자료 작업공간, 백지도·기본도·야간·항공사진 배경 선택, KMA ASOS 관측소 레이어, KOSIS 선택 시 SGIS 기준경계 레이어
+- `/create/2d`: VWorld 2D 지도자료 작업공간, 백지도·기본도·야간·항공사진 배경 선택, KMA ASOS 관측소 레이어, KOSIS 선택 시 검색·통계표/분류/항목/기간 드롭다운과 SGIS 기준경계 레이어
 - `/create/3d`: VWorld 3D 지도자료 작업공간 계약
 - `/create/chart`: 통계·차트자료 작업공간 계약
 - `/inquiry`: 6단계 자료 탐구 허브
 - `/inquiry/2d/:activityId`, `/inquiry/3d/:activityId`, `/inquiry/chart/:activityId`: 자료 유형별 탐구 활동
 - `/status`: API 레지스트리와 브라우저 환경 상태
 
-`/create/chart`에는 KMA ASOS 일자료를 Supabase snapshot에서 읽는 기후 비교 실험이 들어 있다. 월 단위로 정렬된 장기 범위는 `climate_period_summaries` 요약 view를 사용하고, 짧거나 월 중간 범위는 일자료를 사용한다. 자료가 없으면 오류를 숨기지 않고 migration·수집기 실행 상태를 안내한다. `/create/2d`의 KOSIS 선택 화면에는 공개 snapshot과 SGIS 행정구역 경계를 각각 확인하는 패널이 있으며, 확인된 SGIS 경계는 기준 면 레이어로 지도에 표시한다. 지도 배경은 레이어를 읽기 쉬운 백지도를 기본값으로 하고 기본도(도로)·야간지도·항공사진·항공사진+표시로 전환할 수 있다. KOSIS 값은 `region_code`와 SGIS `adm_cd`가 정확히 일치하고 지역별 값·시점·단위가 하나로 확정될 때만 결합 상태를 `ready`로 판정하고 5단계 색상으로 표시하며, 그 전에는 단계구분도 색상을 임의로 결합하지 않는다.
+`/create/chart`에는 KMA ASOS 일자료를 Supabase snapshot에서 읽는 기후 비교 실험이 들어 있다. 월 단위로 정렬된 장기 범위는 `climate_period_summaries` 요약 view를 사용하고, 짧거나 월 중간 범위는 일자료를 사용한다. 자료가 없으면 오류를 숨기지 않고 migration·수집기 실행 상태를 안내한다. `/create/2d`의 KOSIS 선택 화면에는 공개 snapshot과 SGIS 행정구역 경계를 각각 확인하는 패널이 있으며, 확인된 SGIS 경계는 기준 면 레이어로 지도에 표시한다. 지도 배경은 레이어를 읽기 쉬운 백지도를 기본값으로 하고 기본도(도로)·야간지도·항공사진·항공사진+표시로 전환할 수 있다. KOSIS 검색 결과와 메타데이터는 실제 선택 가능한 드롭다운으로 제공하고, 통계표의 수록기간에서 계산한 최소·최대 시점만 시작·종료 드롭다운에 넣어 임의의 연도를 만들지 않는다. 2D 지도와 기후 비교 자료는 현재 화면에서 조작 패널을 제외하고 PNG 이미지 또는 A4 PDF로 내려받을 수 있다. KOSIS 값은 `region_code`와 SGIS `adm_cd`가 정확히 일치하고 지역별 값·시점·단위가 하나로 확정될 때만 결합 상태를 `ready`로 판정하고 5단계 색상으로 표시하며, 그 전에는 단계구분도 색상을 임의로 결합하지 않는다.
 
 ## 품질 확인
 

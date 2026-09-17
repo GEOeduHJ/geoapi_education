@@ -1,10 +1,14 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useId, useMemo, useState } from "react";
 import { fetchKosisMetadata, searchKosisTables } from "../lib/kosis-client";
 import type { KosisMetadataRecord, KosisSearchResult } from "../lib/kosis";
 import { KosisTablePreview } from "./KosisTablePreview";
 
 type SearchStatus = "idle" | "loading" | "ready" | "error";
 type MetadataStatus = "idle" | "loading" | "ready" | "error";
+
+function resultKey(result: KosisSearchResult, index: number): string {
+  return `${result.organizationId ?? "org"}-${result.tableId ?? "table"}-${index}`;
+}
 
 export function KosisTableSearch() {
   const [term, setTerm] = useState("지역별 인구");
@@ -15,6 +19,9 @@ export function KosisTableSearch() {
   const [metadata, setMetadata] = useState<KosisMetadataRecord[]>([]);
   const [metadataStatus, setMetadataStatus] = useState<MetadataStatus>("idle");
   const [metadataError, setMetadataError] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState("");
+  const rawResultSelectId = useId();
+  const resultSelectId = `kosis-table-select-${rawResultSelectId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   const metadataGroups = useMemo(() => {
     const groups = new Map<string, { objectId: string | null; objectName: string | null; records: KosisMetadataRecord[] }>();
@@ -34,6 +41,7 @@ export function KosisTableSearch() {
     setStatus("loading");
     setError(null);
     setSelected(null);
+    setSelectedKey("");
     setMetadata([]);
     setMetadataStatus("idle");
     setMetadataError(null);
@@ -44,6 +52,8 @@ export function KosisTableSearch() {
   }
 
   async function handleSelect(result: KosisSearchResult) {
+    const index = results.indexOf(result);
+    setSelectedKey(index >= 0 ? resultKey(result, index) : "");
     setSelected(result);
     setMetadata([]);
     setMetadataError(null);
@@ -57,6 +67,13 @@ export function KosisTableSearch() {
     setMetadata(response.data);
     setMetadataError(response.error);
     setMetadataStatus(response.error ? "error" : "ready");
+  }
+
+  function handleResultChange(key: string) {
+    setSelectedKey(key);
+    const index = results.findIndex((result, resultIndex) => resultKey(result, resultIndex) === key);
+    const result = results[index];
+    if (result) void handleSelect(result);
   }
 
   return (
@@ -73,6 +90,24 @@ export function KosisTableSearch() {
       </form>
       {status === "error" && <p className="kosis-search-message kosis-search-message--error" role="alert">{error}</p>}
       {status === "ready" && results.length === 0 && <p className="kosis-search-message" role="status">검색 결과가 없습니다. 다른 주제어로 다시 검색해 보세요.</p>}
+      {results.length > 0 && (
+        <div className="kosis-result-picker">
+          <label htmlFor={resultSelectId}>검색 결과에서 통계표 선택</label>
+          <select
+            id={resultSelectId}
+            value={selectedKey}
+            onChange={(event) => handleResultChange(event.target.value)}
+          >
+            <option value="">통계표를 선택하세요</option>
+            {results.map((result, index) => (
+              <option key={resultKey(result, index)} value={resultKey(result, index)}>
+                {(result.tableName ?? "이름 없는 통계표").slice(0, 80)} · {result.organizationName ?? result.organizationId ?? "기관 미상"} · {result.startPeriod ?? "기간 미상"}~{result.endPeriod ?? "기간 미상"}
+              </option>
+            ))}
+          </select>
+          <small>{results.length}개 후보 중 하나를 선택하면 분류·항목과 기간 옵션을 확인할 수 있습니다.</small>
+        </div>
+      )}
       {selected && (
         <div className="kosis-selected-table" role="status">
           <strong>선택한 표</strong>
@@ -98,18 +133,6 @@ export function KosisTableSearch() {
         </div>
       )}
       {selected && metadataStatus === "ready" && <KosisTablePreview selected={selected} metadata={metadata} />}
-      {results.length > 0 && (
-        <div className="kosis-search-results" aria-label="KOSIS 통계표 검색 결과">
-          {results.map((result, index) => (
-            <button className={`kosis-result${selected === result ? " is-selected" : ""}`} key={`${result.organizationId ?? "org"}-${result.tableId ?? index}`} type="button" onClick={() => void handleSelect(result)}>
-              <strong>{result.tableName ?? "이름 없는 통계표"}</strong>
-              <span>{result.organizationName ?? result.organizationId ?? "기관 미상"}</span>
-              <code>{result.organizationId ?? "?"} / {result.tableId ?? "?"}</code>
-              {(result.startPeriod || result.endPeriod) && <small>{result.startPeriod ?? "?"} — {result.endPeriod ?? "?"}</small>}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

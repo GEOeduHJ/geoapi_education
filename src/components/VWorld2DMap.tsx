@@ -142,7 +142,7 @@ export function VWorld2DMap({
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
           <span>배경: {basemapOption.label}</span>
         </div>
-        <div className="vworld-map-basemap-control">
+        <div className="vworld-map-basemap-control" data-export-ignore="true">
           <label htmlFor={`${mapId}-basemap`}>지도 배경</label>
           <select
             id={`${mapId}-basemap`}
