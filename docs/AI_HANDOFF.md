@@ -473,7 +473,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | `fdac808` | typecheck/test(109)/build 통과, 실측 POI 통과 |
 | 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | `8ba1bf7` | typecheck/test(115)/build 통과, 프록시 실측 통과 |
 | 2026-09-17 | OpenCode | 2D-04: 세계 국가경계·WB 인구밀도·world UI | `ebe173d` | typecheck/test(122)/build 통과, 실측 조인 통과 |
-| 2026-09-17 | OpenCode | WORLD-2: 지진·기후·고도·생태 4종 | 미커밋 로컬 변경 | typecheck/test(135)/build 통과, 실측 통과 |
+| 2026-09-17 | OpenCode | WORLD-2: 지진·기후·고도·생태 4종 | `2b4afca` | typecheck/test(135)/build 통과, 실측 통과 |
 
 ## 15. 문서 기준 우선순위
 
