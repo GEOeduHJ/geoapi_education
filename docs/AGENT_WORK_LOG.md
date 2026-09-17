@@ -401,6 +401,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `75486e7 feat: 3D dataset switch with earthquake pillars`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-02b 엔진 위젯 차단·캔버스 리사이즈
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts`(`refreshSize`), `src/components/VWorld3DMap.tsx`(ResizeObserver·3D 프레임 클래스), `src/app/styles.css`(엔진 위젯 차단)
+- 결정/데이터: 엔진 JS에서 위젯 셀렉터 특정(naviPannel·BottomLogo·mapToolBar 등). logo/navigation 옵션은 무시되므로 CSS로 차단. 캔버스 축소는 viewer.resize+updateSize+지연 재호출로 대응
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 엔진 JS 실측. 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: `da81e15 fix: hide 3D engine widgets and refresh canvas size`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
