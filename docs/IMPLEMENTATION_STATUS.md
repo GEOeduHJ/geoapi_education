@@ -113,12 +113,14 @@ KMA 기후자료 수집기는 [kma-climate.mjs](../scripts/kma-climate.mjs)와 [
 ## 검증 기록
 
 - `npm run typecheck`: 통과
-- `npm test`: 13개 테스트 파일·43개 테스트 통과
-- `npm run build`: Vite production build 통과
+- `npm test`: 14개 테스트 파일·48개 테스트 통과
+- `npm run build`: Vite production build 통과. `html2canvas`·`jspdf`는 내보내기 시 지연 로드되어 초기 번들 경고 없이 분리됨
 - `node scripts/smoke-api.mjs`: KOSIS 통합검색을 포함한 provider 스모크, Supabase 공개 읽기와 `learner_attempts` 접근 차단 포함. KOSIS 통계값은 별도 운영 요청으로 후보 표의 8개 소규모 레코드를 확인함
 - 기후자료 적재 검증: Supabase 공개 읽기 `HTTP 200`, 관측소 3개·일자료 9행 확인
 - KMA 장기 백필 검증: 118개 구간·36,530행 저장 완료, 공개 일자료 조회 `HTTP 206`, 월별 view 조회 `HTTP 206`·1,200행 확인
 - 브라우저 확인: 홈, 자료 제작 허브, 2D 제작, 3D 제작, 탐구 허브, 3D 탐구 활동, API 상태 라우트 확인
 - 브라우저 확인: `/create/2d`에서 VWorld 로고·줌 컨트롤·KMA ASOS 10개 관측소 레이어를 로드하고 콘솔 오류·경고가 없음을 확인
+- 운영 브라우저 확인: `/create/2d`의 KOSIS 검색 결과·통계표/분류/항목 드롭다운과 선택 표의 `2008~2025` 수록기간 기반 시작·종료 드롭다운을 확인
+- 운영 브라우저 확인: `/create/2d`에서 PNG·PDF, `/create/chart`에서 PNG·PDF 다운로드 성공 상태와 콘솔 오류 없음 확인
 - 운영 배포 확인: `https://geoapieducation.vercel.app/`의 홈·`/status`·`/create`·`/inquiry`·`/create/2d` 로드 확인. 로컬 키 스모크에서는 VWorld 운영 hostname 로더가 성공했으며, Vercel Production 환경변수와 VWorld 허용목록은 대시보드에서 별도 확인 필요
 - 비밀값 검색: `.env.local`을 제외한 소스·문서·빌드 대상에서 발급키 패턴 미검출
