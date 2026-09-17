@@ -302,6 +302,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 배포 후 세계 렌더 확인 (USGS·Open-Meteo는 후속)
 - 커밋: `ebe173d feat: world country choropleth with World Bank density`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — WORLD-2 지진·기후·고도·생태
+
+- 결과: 완료
+- 변경: `scripts/usgs|openmeteo|opentopo|gbif-snapshot.mjs`+테스트(신규), `quake|meteo|gbif|topo-adapter`+테스트(신규), `ElevationProfile.tsx`(신규), POI 일반화(오버라이드·점 색상), 카탈로그 정적·DB 4종 등록. snapshot 9건·6,668행 공개 적재
+- 결정/데이터: GBIF는 연도 범위로 상한 맞춤(두루미 2015~·저어새 2025~). 지진 안전알림 아님 명시. 국내 ready 9·세계 ready 5
+- 검증: typecheck/test(135)/build 통과. 실측 포인트·표·출처 통과
+- 브라우저/API: 4개 provider 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
+- 차단/주의: EV 적재 대기(429) 제외하고 없음
+- 다음 작업: 배포 후 세계 렌더 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

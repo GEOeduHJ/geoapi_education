@@ -14,11 +14,15 @@ import { useDatasetCatalog, getDatasetIndicators, type DatasetScope } from "../l
 import { getKosisDimensions } from "../lib/kosis-dimensions";
 import { lawCodeToSgisAdmCds, climateMetrics, type ClimateMetric } from "../lib/climate";
 import { fetchForecast, groupForecastByTime, resolveForecastBase, toForecastGrid } from "../lib/forecast";
-import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, WORLD_BANK_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
+import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByClassification, filterObservationsByYear, listObservationYears, AIRKOREA_SNAPSHOT_SCHEMA, GBIF_SNAPSHOT_SCHEMA, KOSIS_SNAPSHOT_SCHEMA, OPENMETEO_SNAPSHOT_SCHEMA, OPENTOPO_SNAPSHOT_SCHEMA, USGS_SNAPSHOT_SCHEMA, WORLD_BANK_SNAPSHOT_SCHEMA, type PublicKosisDataset } from "../lib/geo-observations";
 import { ISO_ALPHA3_TO_M49 } from "../lib/iso-codes";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { AIRKOREA_SIDO_TO_SGIS_ADM_CD, KOSIS_SGG_TO_SGIS_ADM_CD, TOUR_AREA_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
 import { toPoiPoints } from "../lib/tourapi-adapter";
+import { toMeteoProvenance, toMeteoTableModel } from "../lib/meteo-adapter";
+import { toGbifProvenance, toGbifTableModel } from "../lib/gbif-adapter";
+import { ElevationProfile } from "../components/ElevationProfile";
+import { toQuakePoints, toQuakeProvenance, toQuakeTableModel, QUAKE_COLOR_MAJOR, QUAKE_COLOR_MODERATE, QUAKE_COLOR_STRONG } from "../lib/quake-adapter";
 import { Poi2DWorkspace } from "../components/Poi2DWorkspace";
 import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
 import { fetchWorldBoundaries } from "../lib/world-boundaries";
@@ -138,7 +142,16 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     ? AIRKOREA_SNAPSHOT_SCHEMA
     : dataset?.provider === "World Bank"
       ? WORLD_BANK_SNAPSHOT_SCHEMA
-      : KOSIS_SNAPSHOT_SCHEMA;
+      : dataset?.provider === "USGS"
+        ? USGS_SNAPSHOT_SCHEMA
+        : dataset?.provider === "Open-Meteo"
+          ? OPENMETEO_SNAPSHOT_SCHEMA
+          : dataset?.provider === "OpenTopoData"
+            ? OPENTOPO_SNAPSHOT_SCHEMA
+            : dataset?.provider === "GBIF"
+              ? GBIF_SNAPSHOT_SCHEMA
+              : KOSIS_SNAPSHOT_SCHEMA;
+  const isProfileDataset = datasetKey === "opentopo-seoul-busan-profile";
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
   const snapshotIndicators = useMemo(() => (dataset ? getDatasetIndicators(dataset) : []), [dataset]);
   const effectiveIndicator = snapshotIndicators.find((entry) => entry.key === indicatorKey) ?? snapshotIndicators[0] ?? null;
@@ -276,13 +289,20 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     if (!boundaryCode) return snapshotDataset.observations;
     return snapshotDataset.observations.filter((observation) => {
       const areaCode = typeof observation.attributes.area_code === "string" ? observation.attributes.area_code : "";
+      // 지역 코드가 없는 세계 POI(지진 등)는 경계 필터를 적용하지 않는다.
+      if (!areaCode) return true;
       return (TOUR_AREA_TO_SGIS_ADM_CD[areaCode] ?? "") === boundaryCode;
     });
   }, [isPoiDataset, snapshotDataset.observations, boundaryCode]);
 
   const poiPoints = useMemo(
-    () => (isPoiDataset ? toPoiPoints(poiObservations) : null),
-    [isPoiDataset, poiObservations],
+    () => {
+      if (!isPoiDataset) return null;
+      return datasetKey === "usgs-earthquake-history"
+        ? toQuakePoints(poiObservations)
+        : toPoiPoints(poiObservations);
+    },
+    [isPoiDataset, poiObservations, datasetKey],
   );
 
   const selectedPoiDetail = useMemo(() => {
@@ -292,6 +312,40 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     const address = typeof found.attributes.address === "string" ? found.attributes.address : "";
     return { title: found.label ?? "", address };
   }, [selectedPoiId, poiObservations]);
+
+  const isQuakeDataset = datasetKey === "usgs-earthquake-history";
+  const isMeteoDataset = datasetKey === "open-meteo-city-climate";
+  const isGbifDataset = datasetKey === "gbif-flagship-species";
+  const meteoTableModel = useMemo(
+    () => (isMeteoDataset ? toMeteoTableModel(poiObservations) : null),
+    [isMeteoDataset, poiObservations],
+  );
+  const meteoProvenance = useMemo(
+    () => (isMeteoDataset
+      ? toMeteoProvenance(snapshotDataset.snapshot, poiObservations.length, dataset?.title ?? "", dataset?.sourceUrl ?? "")
+      : null),
+    [isMeteoDataset, snapshotDataset.snapshot, poiObservations.length, dataset?.title, dataset?.sourceUrl],
+  );
+  const gbifTableModel = useMemo(
+    () => (isGbifDataset ? toGbifTableModel(poiObservations) : null),
+    [isGbifDataset, poiObservations],
+  );
+  const gbifProvenance = useMemo(
+    () => (isGbifDataset
+      ? toGbifProvenance(snapshotDataset.snapshot, poiObservations.length, dataset?.title ?? "", dataset?.sourceUrl ?? "")
+      : null),
+    [isGbifDataset, snapshotDataset.snapshot, poiObservations.length, dataset?.title, dataset?.sourceUrl],
+  );
+  const quakeTableModel = useMemo(
+    () => (isQuakeDataset ? toQuakeTableModel(poiObservations) : null),
+    [isQuakeDataset, poiObservations],
+  );
+  const quakeProvenance = useMemo(
+    () => (isQuakeDataset
+      ? toQuakeProvenance(snapshotDataset.snapshot, poiObservations.length, dataset?.title ?? "", dataset?.sourceUrl ?? "")
+      : null),
+    [isQuakeDataset, snapshotDataset.snapshot, poiObservations.length, dataset?.title, dataset?.sourceUrl],
+  );
 
   const visibleStationIds = useMemo(() => {
     if (!boundaryCode) return climateState.stations.map((station) => station.station_id);
@@ -404,6 +458,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
               poiPoints={poiPoints}
               onSelectPoi={setSelectedPoiId}
               selectedPoi={selectedPoiDetail}
+              poiLegend={isQuakeDataset ? [{ color: QUAKE_COLOR_MODERATE, label: "M6대" }, { color: QUAKE_COLOR_STRONG, label: "M7대" }, { color: QUAKE_COLOR_MAJOR, label: "M8 이상" }] : null}
               forecastMode={forecastMode}
               onForecastClick={handleForecastClick}
               worldView={!isDomestic}
@@ -514,8 +569,9 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} state={climateViewState} />}
-      {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={snapshotDataset.error ?? sgisBoundaryError} selectedYear={effectiveSnapshotYear} exportSlug={datasetKey} />}
-      {isPoiDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} observations={poiObservations} error={snapshotDataset.error ?? sgisBoundaryError} exportSlug={datasetKey} />}
+      {isSnapshotDataset && <Snapshot2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} providerLabel={dataset?.provider ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={snapshotDataset.error ?? activeBoundaryError} selectedYear={effectiveSnapshotYear} exportSlug={datasetKey} />}
+      {isPoiDataset && !isProfileDataset && <Poi2DWorkspace datasetTitle={effectiveIndicator && effectiveIndicator.key !== "default" ? `${dataset?.title ?? ""} · ${effectiveIndicator.label}` : (dataset?.title ?? "")} sourceUrl={dataset?.sourceUrl ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} observations={poiObservations} error={snapshotDataset.error ?? activeBoundaryError} exportSlug={datasetKey} eyebrow={isQuakeDataset ? "EARTHQUAKE · 2D DATA VIEW" : isMeteoDataset ? "CITY CLIMATE · 2D DATA VIEW" : isGbifDataset ? "SPECIES · 2D DATA VIEW" : undefined} heading={isQuakeDataset ? "지진 분포·목록" : isMeteoDataset ? "도시 기후 비교" : isGbifDataset ? "상징종 분포·목록" : undefined} description={isQuakeDataset ? "규모 6.0 이상 지진을 규모 색상으로 표시합니다. 안전 알림이 아니라 과거 기록 탐구용입니다." : isMeteoDataset ? "5개 도시의 일자료를 점분포와 목록으로 비교합니다. 재분석 자료이며 관측소 공식값과 구분합니다." : isGbifDataset ? "국내 발생 기록을 점분포와 목록으로 표시합니다. 레코드별 라이선스·제공자를 함께 기록합니다." : undefined} searchPlaceholder={isQuakeDataset ? "예: Japan" : isMeteoDataset ? "예: 서울" : isGbifDataset ? "예: 2024" : undefined} countUnit={isQuakeDataset ? "건" : isMeteoDataset ? "행" : isGbifDataset ? "건" : undefined} tableOverride={quakeTableModel ?? meteoTableModel ?? gbifTableModel} provenanceOverride={quakeProvenance ?? meteoProvenance ?? gbifProvenance} />}
+      {isProfileDataset && <ElevationProfile datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={snapshotStatus} snapshot={snapshotDataset.snapshot} observations={poiObservations} error={snapshotDataset.error ?? activeBoundaryError} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && forecast && <ForecastPanel result={forecast} onClose={() => setForecast(null)} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>

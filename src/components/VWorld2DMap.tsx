@@ -48,6 +48,7 @@ export function VWorld2DMap({
   poiPoints = null,
   onSelectPoi = null,
   selectedPoi = null,
+  poiLegend = null,
   forecastMode = false,
   onForecastClick = null,
   worldView = false,
@@ -63,6 +64,7 @@ export function VWorld2DMap({
   poiPoints?: PoiPointInput[] | null;
   onSelectPoi?: ((poiId: string | null) => void) | null;
   selectedPoi?: { title: string; address: string } | null;
+  poiLegend?: Array<{ color: string; label: string }> | null;
   forecastMode?: boolean;
   onForecastClick?: ((lon: number, lat: number) => void) | null;
   worldView?: boolean;
@@ -244,6 +246,7 @@ export function VWorld2DMap({
           {showStations && <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>}
           {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />{boundaryScopeLabel}{thematicSummary ? ` · ${boundaryValueLabel}` : ""}</span>}
           {poiPoints && poiPoints.length > 0 && <span><i className="vworld-map-legend__dot" />관심지점 분포</span>}
+          {poiLegend?.map((entry) => <span key={entry.label}><i className="vworld-map-legend__dot" style={{ background: entry.color, boxShadow: `0 0 0 1px ${entry.color}` }} />{entry.label}</span>)}
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
           {stationThematicSummary && <span><i className="vworld-map-legend__gradient vworld-map-legend__gradient--point" />지점값 {stationThematicSummary.min.toFixed(1)}–{stationThematicSummary.max.toFixed(1)}</span>}
           <span>배경: {basemapOption.label}</span>

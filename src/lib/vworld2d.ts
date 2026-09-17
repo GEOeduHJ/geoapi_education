@@ -492,20 +492,31 @@ export interface PoiPointInput {
   id: string;
   lon: number;
   lat: number;
+  title?: string;
+  color?: string;
 }
+
+const DEFAULT_POI_FILL = "rgba(15, 139, 141, 0.9)";
 
 function createPoiLayer(
   runtime: VWorld2DRuntime,
   points: PoiPointInput[],
 ): VWorldLayer | null {
   if (!points.length) return null;
-  const style = new runtime.ol.style.Style({
-    image: new runtime.ol.style.Circle({
-      radius: 5,
-      fill: new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.9)" }),
-      stroke: new runtime.ol.style.Stroke({ color: "#ffffff", width: 1.5 }),
-    }),
-  });
+  const stylesByFill = new Map<string, unknown>();
+  const getStyle = (fillColor: string) => {
+    const cached = stylesByFill.get(fillColor);
+    if (cached) return cached;
+    const style = new runtime.ol.style.Style({
+      image: new runtime.ol.style.Circle({
+        radius: 5,
+        fill: new runtime.ol.style.Fill({ color: fillColor }),
+        stroke: new runtime.ol.style.Stroke({ color: "#ffffff", width: 1.5 }),
+      }),
+    });
+    stylesByFill.set(fillColor, style);
+    return style;
+  };
   const features = points.map((point) => {
     const feature = new runtime.ol.Feature({
       geometry: new runtime.ol.geom.Point(
@@ -513,7 +524,7 @@ function createPoiLayer(
       ),
       poiId: point.id,
     });
-    feature.setStyle(style);
+    feature.setStyle(getStyle(point.color ?? DEFAULT_POI_FILL));
     return feature;
   });
   const source = new runtime.ol.source.Vector({ features });

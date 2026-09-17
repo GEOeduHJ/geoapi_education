@@ -351,6 +351,12 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 
 **보류 해제:** 당초 국내 완성 후 착수 조건이었으나 사용자 지시로 착수. 국내 브라우저 렌더 확인은 여전히 잔여다.
 
+### WORLD-2 — 지진·기후·고도·생태 (완료, 2026-09-17)
+
+**완료 내용:** USGS M6+ 896행(규모 색상 점·표), Open-Meteo 5도시 일자료 2지표(3,660행), 서울-부산 고도 횡단면 25지점(SVG 단면), GBIF 두루미·저어새 1,257행(라이선스 보존). POI 파이프라인 일반화(테이블·출처 오버라이드), 점 색상 지원, `kind` point 4종 카탈로그 등록. 국내 ready 9·세계 ready 5개.
+
+**검증:** typecheck/test(135)/build 통과. 실측 포인트·표·출처 통과.
+
 **선행:** `2D-02`
 
 - 국가 ISO 코드·이름·geometry 버전을 고정한다.
@@ -467,6 +473,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | `fdac808` | typecheck/test(109)/build 통과, 실측 POI 통과 |
 | 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | `8ba1bf7` | typecheck/test(115)/build 통과, 프록시 실측 통과 |
 | 2026-09-17 | OpenCode | 2D-04: 세계 국가경계·WB 인구밀도·world UI | `ebe173d` | typecheck/test(122)/build 통과, 실측 조인 통과 |
+| 2026-09-17 | OpenCode | WORLD-2: 지진·기후·고도·생태 4종 | 미커밋 로컬 변경 | typecheck/test(135)/build 통과, 실측 통과 |
 
 ## 15. 문서 기준 우선순위
 

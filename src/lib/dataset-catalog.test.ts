@@ -21,7 +21,14 @@ describe("curated dataset catalog", () => {
 
   it("marks only datasets with verified stored data as ready", () => {
     const ready = DATASET_CATALOG.filter((dataset) => dataset.status === "ready");
-    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count", "airkorea-station-daily", "world-bank-population-density", "tourapi-area-attractions"]);
+    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count", "airkorea-station-daily", "world-bank-population-density", "open-meteo-city-climate", "usgs-earthquake-history", "tourapi-area-attractions", "gbif-flagship-species", "opentopo-seoul-busan-profile"]);
+    expect(getDataset("usgs-earthquake-history")).toMatchObject({
+      scope: "world",
+      provider: "USGS",
+      status: "ready",
+      kind: "point",
+      capabilities: ["map", "table"],
+    });
     expect(getDataset("tourapi-area-attractions")).toMatchObject({
       scope: "domestic",
       provider: "한국관광공사",
@@ -38,7 +45,9 @@ describe("curated dataset catalog", () => {
       capabilities: ["map", "chart", "table"],
       period: { min: "2018", max: "2024" },
     });
-    expect(getDataset("open-meteo-city-climate")?.status).toBe("planned");
+    expect(getDataset("open-meteo-city-climate")).toMatchObject({ scope: "world", status: "ready", kind: "point" });
+    expect(getDataset("gbif-flagship-species")).toMatchObject({ scope: "domestic", status: "ready", kind: "point" });
+    expect(getDataset("opentopo-seoul-busan-profile")).toMatchObject({ scope: "domestic", status: "ready", kind: "point" });
   });
 
   it("keeps the ready KMA dataset's declared period in sync with the chart's actual DB coverage bounds", () => {
@@ -47,12 +56,15 @@ describe("curated dataset catalog", () => {
     expect(dataset?.period.max).toBe(DEFAULT_CLIMATE_TO);
   });
 
-  it("locks every domestic entry to sido-only boundary support", () => {
-    for (const dataset of getDatasets("domestic")) {
+  it("locks every domestic polygon entry to sido-only boundary support", () => {
+    for (const dataset of getDatasets("domestic").filter((entry) => entry.kind === "polygon")) {
       expect(dataset.supportedLevels).toEqual(["sido"]);
       expect(supportsBoundaryLevel(dataset, "sido")).toBe(true);
       expect(supportsBoundaryLevel(dataset, "sigungu")).toBe(false);
       expect(supportsBoundaryLevel(dataset, "emdong")).toBe(false);
+    }
+    for (const dataset of getDatasets("domestic").filter((entry) => entry.kind === "point")) {
+      expect(dataset.supportedLevels).toEqual([]);
     }
   });
 
