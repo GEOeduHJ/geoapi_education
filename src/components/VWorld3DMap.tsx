@@ -80,7 +80,6 @@ export function VWorld3DMap() {
 
         const handle = await createVWorld3DMap(mapId);
         if (cancelled) return;
-        if (!handle) throw new Error("VWorld 3D 런타임을 초기화하지 못했습니다.");
         mapRef.current = handle;
         renderPrisms(handle, boundaryResult.data, kosisResult, heightScaleRef.current);
         setStatus("ready");

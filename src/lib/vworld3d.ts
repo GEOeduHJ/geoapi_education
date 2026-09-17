@@ -223,12 +223,17 @@ function waitForViewer(timeoutMs = 15_000): Promise<Ws3dViewer | null> {
   });
 }
 
-export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMap | null> {
+export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMap> {
   const namespace = getVw3D();
   const container = document.getElementById(containerId);
-  if (!namespace || !container) return null;
+  if (!namespace || !container) throw new Error("3D 네임스페이스(vw.Map·CameraPosition 등)가 없습니다.");
+  let map: VwMap3D;
   try {
-    const map = new namespace.Map();
+    map = new namespace.Map();
+  } catch {
+    throw new Error("지도를 생성하지 못했습니다(new vw.Map).");
+  }
+  try {
     map.setOption?.({
       mapId: containerId,
       initPosition: new namespace.CameraPosition(
@@ -239,19 +244,26 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
       navigation: true,
     });
     map.setMapId?.(containerId);
+  } catch {
+    throw new Error("초기 위치 설정에 실패했습니다.");
+  }
+  try {
     map.start?.();
-    // start() 뒤 viewer가 비동기로 붙으므로 폴링으로 기다린다.
-    const viewer = await waitForViewer();
-    if (!viewer) {
-      if (typeof map.destroy === "function") {
-        try {
-          map.destroy();
-        } catch {
-          /* ignore */
-        }
+  } catch {
+    throw new Error("지도 시작(start)에 실패했습니다.");
+  }
+  // start() 뒤 viewer가 비동기로 붙으므로 폴링으로 기다린다.
+  const viewer = await waitForViewer();
+  if (!viewer) {
+    if (typeof map.destroy === "function") {
+      try {
+        map.destroy();
+      } catch {
+        /* ignore */
       }
-      return null;
     }
+    throw new Error("viewer가 준비되지 않았습니다(15초 초과).");
+  }
     return {
       viewer,
       dispose() {
@@ -269,9 +281,6 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
         }
       },
     };
-  } catch {
-    return null;
-  }
 }
 
 /** 시도 폴리곤을 값 비례 모식 기둥으로 쌓는다. 색상은 2D와 같은 5단계. */
