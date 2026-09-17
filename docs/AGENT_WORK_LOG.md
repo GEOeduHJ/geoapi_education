@@ -346,6 +346,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `3e15333 fix: intercept 3D loader document.write and wait for viewer`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01d 엔진 https 강제
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts` (캡처된 엔진 URL http→https)
+- 결정/데이터: "의존 스크립트 실패"는 혼합 콘텐츠 차단이었다. 로더가 도메인에 scheme이 없어 http URL을 만들고, https 페이지에서 스크립트 로드가 차단됨. 엔진 3종의 https 200을 직접 확인 후 강제 전환
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 엔진 스크립트 https 실측(200). 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: `182f94d fix: force https for 3D engine scripts`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

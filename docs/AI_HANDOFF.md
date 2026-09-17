@@ -485,6 +485,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | 3D-01: 프리즘 지도 첫 슬라이스 (렌더 미검증) | `6c57ba5` | typecheck/test(139)/build 통과, 로더 200 확인 |
 | 2026-09-18 | OpenCode | 3D-01b: 카탈로그 레이스 수정 (빈 목록 오판) | `c3865c9` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-01c: 로더 document.write 가로채기·viewer 대기 | `3e15333` | typecheck/test(139)/build 통과 |
+| 2026-09-18 | OpenCode | 3D-01d: 엔진 https 강제 (혼합 콘텐츠 차단) | `182f94d` | typecheck/test(139)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 
