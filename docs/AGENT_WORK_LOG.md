@@ -324,6 +324,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 렌더·기둥·카메라 확인
 - 커밋: `6c57ba5 feat: VWorld 3D prism map vertical slice`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01b 카탈로그 레이스 수정
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/components/VWorld3DMap.tsx` (effect가 카탈로그 도착 대기 + `datasets` 의존)
+- 결정/데이터: Production 스크린샷의 "연결된 공개 snapshot이 없습니다"는 오판이었다. 마운트 시점 빈 목록으로 즉시 판단해 정적 fallback의 null에 걸린 것. anon 카탈로그 조회는 200 정상을 별도 확인. 같은 패턴은 CreatePage에 없음(deps 정상)
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

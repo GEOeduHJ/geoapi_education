@@ -43,6 +43,15 @@ export function VWorld3DMap() {
 
   useEffect(() => {
     let cancelled = false;
+    // 카탈로그(DB override 포함)가 도착하기 전에는 대기한다.
+    // 마운트 시점의 빈 목록으로 판단하면 정적 fallback의 null snapshotId에 걸려
+    // 공개 snapshot이 있는데도 실패로 끝나는 레이스가 발생한다.
+    if (datasets.length === 0) {
+      setStatus("loading");
+      return () => {
+        cancelled = true;
+      };
+    }
     setStatus("loading");
     setError(null);
 
@@ -51,7 +60,9 @@ export function VWorld3DMap() {
     if (!indicator?.snapshotId) {
       setStatus("error");
       setError("연결된 공개 snapshot이 없습니다.");
-      return () => undefined;
+      return () => {
+        cancelled = true;
+      };
     }
     const snapshotId = indicator.snapshotId;
 
@@ -87,7 +98,7 @@ export function VWorld3DMap() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapId]);
+  }, [mapId, datasets]);
 
   function renderPrisms(handle: VWorld3DMapHandle, response: SgisBoundaryResponse, kosis: PublicKosisDataset, scale: HeightScaleKey) {
     const join = joinKosisObservationsToSgisBoundaries(response, kosis.observations, { codeMap: KOSIS_SGG_TO_SGIS_ADM_CD });
