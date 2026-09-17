@@ -95,6 +95,50 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: `2D-03`(KOSIS controlled snapshot) 착수 가능. 그 전에 SGIS `tboudary_yr`를 가끔 확인해 2026이 추가됐는지 확인 권장(위 주의사항 (3)).
 - 커밋: 미커밋 로컬 변경
 
+### 2026-09-17 — OpenCode — SIDO-LOCK
+
+- 결과: 완료
+- 변경: `src/lib/data-contract.ts`(`BoundaryLevel`, `SUPPORTED_DOMESTIC_BOUNDARY_LEVELS`, `DatasetQuery.boundaryLevel`), `src/lib/dataset-catalog.ts`(`supportedLevels`, `supportsBoundaryLevel`, DB 행 scope 기반 매핑), `src/lib/sgis.ts`(`DOMESTIC_SIDO_BOUNDARY_QUERY`, `buildDomesticSidoBoundaryQuery`), `src/pages/CreatePage.tsx`(builder 사용, 지리 필터 문구 시도 고정), `src/components/DatasetSelector.tsx`(시도/국가 단위 칩), `src/components/SgisBoundaryStatusPanel.tsx`(`2025 · 시도` 라벨), `src/lib/sgis.test.ts`(신규 2개), `src/lib/dataset-catalog.test.ts`(3개 추가), `docs/2D_IMPLEMENTATION_PLAN.md` §7, `docs/AI_HANDOFF.md`
+- 결정/데이터: 사용자 결정에 따라 domestic 2D를 시도 단위로 고정. 시군구는 crosswalk·시군구급 snapshot 부재로 대기, 행정동(행정동/법정동 불일치)은 구현 제외. `dataset_catalog` DB에 level 컬럼이 없어 scope 기준 기본값으로 매핑.
+- 검증: `npm run typecheck` 통과, `npm test` 통과(17개 파일·75개 테스트), `npm run build` 통과, 로컬 Vite dev 서버 `/create/2d/domestic` 200 확인
+- 브라우저/API: 렌더 수준 검증은 미실시(이 세션에 브라우저 도구 없음). Production에서 시도 칩·필터 문구 1회 확인 권장. 실제 API·Supabase 호출 없음.
+- 차단/주의: 없음
+- 다음 작업: `2D-03` — 시도급 KOSIS 표 controlled snapshot 적재 후 실제 주제도 검증
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — 2D-03 (적재 전 단계)
+
+- 결과: 부분 완료 (DRY-RUN·대응표·조인 연결 완료, `--write --public` 차단)
+- 변경: `src/lib/kosis-crosswalk.ts`(신규), `src/lib/kosis-crosswalk.test.ts`(신규 2개), `src/lib/geo-join.ts`(`codeMap` 옵션·`crosswalk` 진단), `src/lib/geo-join.test.ts`(2개 추가), `src/pages/CreatePage.tsx`(KOSIS 조인에 대응표 전달), `src/components/KosisBoundaryJoinStatusPanel.tsx`(대응표 적용 표시), `docs/KOSIS_ADAPTER.md`, `docs/AI_HANDOFF.md`
+- 결정/데이터: `getMeta` 22행에서 `1224` 광주·`1236` 전남이 상위 `12`의 하위 코드임을 확인 — 이름 추정이 아닌 공식 분류 계층 기반 대응표(`1224→24`, `1236→36`). DRY-RUN 17행·단일 시점(2025)·단일 단위(천㎡)·결측 0, SGIS 17/17 조인 설계. 지표 `T10`(A÷B×1000), 분모 `T001`/`T002`는 문서로 보존하고 snapshot은 단일 항목만 적재. 원자료 `region_code`는 보존하고 조인 시점에만 변환
+- 검증: `npm run typecheck` 통과, `npm test` 통과(18개 파일·79개 테스트), `npm run build` 통과
+- 브라우저/API: KOSIS metadata·테이블 API 실측(HTTP 200, 22행·17행). 키·원문 비밀값 기록 없음. 브라우저 렌더 검증은 공개 적재 후 실시
+- 차단/주의: `--write --public`은 `0005` migration(SQL Editor 적용, unique index) 확인 전까지 실행하지 않음. 사용자가 적용 후 알리면 적재 명령(`docs/KOSIS_ADAPTER.md` 참조) 실행
+- 다음 작업: `0005` 적용 확인 → `--write --public` → 공개 snapshot·17개 경계값·조인 패널 브라우저 검증
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — 2D-03 (적재·공개 완료)
+
+- 결과: 완료
+- 변경: `scripts/kosis-snapshot.mjs`(`PRD_SE="A"` 연간 처리, `buildSnapshotChecksum` 통일), `scripts/kosis-snapshot.test.mjs`(2개 추가), 운영 DB에 KOSIS snapshot 1개·관측값 17행 공개 적재
+- 결정/데이터: `0005` 재실행 policy 중복 에러(`42710`)는 기존 전체 적용의 증거로 판단하고, 동일 ID upsert 성공으로 unique index 동작을 기능 확인. `0006` 적용 성공 후 anon `dataset_catalog` 조회가 `404`→`200`(0행)으로 전환. `--write`(비공개)→검증→`--write --public` 순서 준수. snapshot ID `b0f7f9c9-a796-46fc-b275-66a0a1ea55e0`, 17행, checksum 앞 16자리 `44b8a961090c2fb5`, 지표 T10·단위 천㎡·시점 2025
+- 검증: `npm run typecheck` 통과, `npm test` 통과(18개 파일·81개 테스트), `npm run build` 통과. 비공개 검증(service-role 17행·결측 0·anon 0행)과 공개 검증(anon snapshot 1행·관측값 17행·결측 0) 완료. Production SGIS 17경계 + 공개 snapshot 실측 조인 `ready` 17/17 확인(일회성 테스트 후 삭제)
+- 브라우저/API: KOSIS metadata·테이블·SGIS 경계·Supabase REST 실측. 키·원문 비밀값 기록 없음. `/create/2d/domestic` 렌더 확인은 Production 배포 후 권장
+- 차단/주의: 없음
+- 다음 작업: `2D-04` — World Bank 세계 2D 수직 슬라이스. 또는 KOSIS dataset_catalog published 행 등록으로 DB override 경로 재검증(2D-01 잔여)
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — 국내 Audit·KOSIS ready 전환·통합 커밋
+
+- 결과: 완료
+- 변경: `src/lib/dataset-catalog.ts`(KOSIS `ready`, `capabilities: ["map"]`, coverage·설명 갱신), `src/lib/dataset-catalog.test.ts`, `docs/AI_HANDOFF.md`(2D-04 세계 연기, KOSIS 그래프·표 잔여 명시)
+- 결정/데이터: 사용자 결정 — 세계 지도는 국내 완성(KMA·KOSIS 지도·그래프·표·출처·export) 후에 착수. 국내 Audit 결과: KMA 5종 완비, KOSIS는 지도만(그래프·표·provenance 잔여), 에어코리아 planned 유지. KOSIS 그래프·표 UI가 없으므로 `capabilities`를 `["map"]`으로 정직 표기
+- 검증: `npm run typecheck` 통과, `npm test` 통과(18개 파일·81개 테스트), `npm run build` 통과, diff 비밀값 스캔 clean
+- 브라우저/API: 추가 API 호출 없음. KOSIS choropleth 렌더는 Production 배포 후 확인 필요
+- 차단/주의: 없음
+- 다음 작업: KOSIS 그래프·표·provenance 연결 (국내 완성 잔여)
+- 커밋: 미커밋 로컬 변경 → 아래 통합 커밋에 포함
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

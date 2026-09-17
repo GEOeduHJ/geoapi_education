@@ -19,7 +19,7 @@ export function SgisBoundaryStatusPanel({
           <p className="eyebrow">SGIS BOUNDARY / 2D REFERENCE</p>
           <h4 id="sgis-boundary-panel-title">행정구역 경계 준비</h4>
         </div>
-        <span>2025</span>
+        <span>2025 · 시도</span>
       </div>
       {status === "idle" && <p className="sgis-boundary-panel__message" role="status">SGIS 경계 요청을 준비하는 중입니다…</p>}
       {status === "loading" && <p className="sgis-boundary-panel__message" role="status">시도 경계를 확인하는 중입니다…</p>}

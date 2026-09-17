@@ -26,6 +26,8 @@ export interface BoundaryJoinResult {
   missingBoundaryCount: number;
   unmatchedObservationCodes: string[];
   ambiguousCodes: string[];
+  /** 공식 대응표로 변환된 코드 쌍. 빈 배열이면 순수 exact match다. */
+  crosswalk: Array<{ from: string; to: string }>;
   values: Record<string, BoundaryJoinValue>;
   periods: string[];
   units: string[];
@@ -52,10 +54,16 @@ function distinctDimensionValues(
  * one numeric observation, or when the observation set mixes periods/units.
  * This prevents an accidental color map built from multiple categories or
  * time points.
+ *
+ * `codeMap` is an official crosswalk (e.g. KOSIS SGG child codes to SGIS
+ * `adm_cd`) applied before matching. Raw observation codes are never mutated;
+ * every translation is reported in `crosswalk` for the diagnosis panel.
+ * Name-similarity guessing stays forbidden.
  */
 export function joinKosisObservationsToSgisBoundaries(
   boundaries: SgisBoundaryResponse | null,
   observations: PublicGeoObservation[],
+  options: { codeMap?: Record<string, string> } = {},
 ): BoundaryJoinResult {
   const boundaryFeatures = boundaries?.data.features ?? [];
   const boundaryCodes = new Set(
@@ -71,10 +79,15 @@ export function joinKosisObservationsToSgisBoundaries(
   const periods = distinctDimensionValues(numericObservations, (observation) => observation.observed_at, "(시점 없음)");
   const units = distinctDimensionValues(numericObservations, (observation) => observation.unit, "(단위 없음)");
   const observationsByCode = new Map<string, PublicGeoObservation[]>();
+  const crosswalk: Array<{ from: string; to: string }> = [];
 
   for (const observation of numericObservations) {
-    const code = canonicalCode(observation.region_code);
-    if (!code) continue;
+    const rawCode = canonicalCode(observation.region_code);
+    if (!rawCode) continue;
+    const code = options.codeMap?.[rawCode] ?? rawCode;
+    if (code !== rawCode && !crosswalk.some((entry) => entry.from === rawCode)) {
+      crosswalk.push({ from: rawCode, to: code });
+    }
     const rows = observationsByCode.get(code) ?? [];
     rows.push(observation);
     observationsByCode.set(code, rows);
@@ -99,6 +112,7 @@ export function joinKosisObservationsToSgisBoundaries(
     missingBoundaryCount,
     unmatchedObservationCodes,
     ambiguousCodes,
+    crosswalk,
     periods,
     units,
   };

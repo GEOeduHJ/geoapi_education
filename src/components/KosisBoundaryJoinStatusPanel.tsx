@@ -67,10 +67,11 @@ export function KosisBoundaryJoinStatusPanel({
           <strong>정확히 일치한 지역 {result.matchedCount}개 — 단계구분도 표시 조건 충족</strong>
           <span>코드가 같은 값만 결합했습니다. 경계가 비어 있는 지역은 {result.missingBoundaryCount}개입니다.</span>
           <small>{result.periods.join(", ")} · {result.units.join(", ")}</small>
+          {result.crosswalk.length > 0 && <small>공식 대응표 적용: {result.crosswalk.map((entry) => `${entry.from}→${entry.to}`).join(", ")}</small>}
         </div>
       )}
 
-      <p className="kosis-join-panel__notice">행정구역 이름으로 추정하지 않고, KOSIS `region_code`와 SGIS `adm_cd`가 정확히 같은 경우만 결합합니다.</p>
+      <p className="kosis-join-panel__notice">행정구역 이름으로 추정하지 않고, KOSIS `region_code`와 SGIS `adm_cd`가 정확히 같거나 공식 대응표로 확인된 경우만 결합합니다.</p>
     </section>
   );
 }

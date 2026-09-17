@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { BoundaryLevel } from "./data-contract";
 import { hasSupabaseClientConfig } from "./env";
 
 export type DatasetScope = "domestic" | "world";
@@ -19,6 +20,12 @@ export interface DatasetDefinition {
   description: string;
   sourceUrl: string;
   storage: "supabase" | "server-cache" | "planned";
+  /**
+   * 이 데이터셋을 국내 행정경계 choropleth로 그릴 수 있는 수준.
+   * 2026-09-17 결정: 값 원천이 시도 단위까지만 검증됐으므로 domestic은
+   * ["sido"]로 고정하고, 세계 dataset은 국내 경계를 쓰지 않아 []이다.
+   */
+  supportedLevels: BoundaryLevel[];
 }
 
 /**
@@ -41,6 +48,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     description: "Supabase에 저장한 ASOS 일자료와 월별 요약으로 지점별 기후 차이를 비교합니다.",
     sourceUrl: "https://apihub.kma.go.kr/",
     storage: "supabase",
+    supportedLevels: ["sido"],
   },
   {
     key: "kosis-sido-city-park-per-capita",
@@ -49,13 +57,14 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     provider: "KOSIS",
     topic: "도시·환경",
     space: "시도",
-    coverage: "코드·경계 기준 확인 중",
+    coverage: "17개 시도",
     period: { min: "2025", max: "2025", label: "2025" },
-    capabilities: ["map", "chart", "table"],
-    status: "planned",
-    description: "KOSIS T10 후보는 확인했지만 통합지역 코드와 2025 SGIS 경계 기준을 확정한 뒤 공개합니다.",
+    capabilities: ["map"],
+    status: "ready",
+    description: "2025년 시도별 인구 천 명당 도시공원 조성면적을 공개 snapshot 단계구분도로 표시합니다. 그래프·표는 후속 작업에서 연결합니다.",
     sourceUrl: "https://kosis.kr/",
-    storage: "planned",
+    storage: "supabase",
+    supportedLevels: ["sido"],
   },
   {
     key: "airkorea-station-daily",
@@ -71,6 +80,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     description: "측정소별 PM10·PM2.5·오존과 지역 차이를 snapshot으로 제공합니다.",
     sourceUrl: "https://www.data.go.kr/data/15073861/openapi.do",
     storage: "planned",
+    supportedLevels: ["sido"],
   },
   {
     key: "world-bank-population-density",
@@ -86,6 +96,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     description: "국가 코드와 지표 metadata를 고정한 뒤 세계 단계구분도·순위·시계열로 제공합니다.",
     sourceUrl: "https://data.worldbank.org/",
     storage: "planned",
+    supportedLevels: [],
   },
   {
     key: "open-meteo-city-climate",
@@ -101,6 +112,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     description: "관측값·재분석값·모델값을 구분하여 도시별 기후 차이를 비교합니다.",
     sourceUrl: "https://open-meteo.com/",
     storage: "planned",
+    supportedLevels: [],
   },
   {
     key: "usgs-earthquake-history",
@@ -116,6 +128,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     description: "지진 위치·규모·깊이·발생 시점을 점 자료와 시간축으로 탐구합니다.",
     sourceUrl: "https://earthquake.usgs.gov/fdsnws/event/1/",
     storage: "planned",
+    supportedLevels: [],
   },
 ];
 
@@ -125,6 +138,11 @@ export function getDatasets(scope: DatasetScope): DatasetDefinition[] {
 
 export function getDataset(datasetKey: string): DatasetDefinition | null {
   return DATASET_CATALOG.find((dataset) => dataset.key === datasetKey) ?? null;
+}
+
+/** 이 데이터셋을 해당 경계 수준의 choropleth로 그릴 수 있는지 확인한다. */
+export function supportsBoundaryLevel(dataset: DatasetDefinition, level: BoundaryLevel): boolean {
+  return dataset.supportedLevels.includes(level);
 }
 
 /**
@@ -186,6 +204,9 @@ export function mapDatasetCatalogRow(value: unknown): DatasetDefinition | null {
     description: typeof value.description === "string" ? value.description : "",
     sourceUrl: typeof value.source_url === "string" ? value.source_url : "",
     storage,
+    // dataset_catalog 테이블에는 level 컬럼이 아직 없어 scope 기준으로 고정한다.
+    // domestic published 행은 시도 단위까지만 보장되고, world 행은 국내 경계를 쓰지 않는다.
+    supportedLevels: scope === "domestic" ? ["sido"] : [],
   };
 }
 

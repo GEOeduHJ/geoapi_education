@@ -282,6 +282,14 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 - [x] 실제 자료 범위 밖의 날짜를 선택할 수 없다(기존 `Climate2DWorkspace` date input의 min/max로 이미 보장).
 - [x] Provenance panel에 결측률·snapshot ID·출처가 표시된다(임의 값 없음).
 
+### SIDO-LOCK — 시도 단위 고정 계약 (완료, 2026-09-17)
+
+**배경:** 사용자가 시도/시군구/행정동 3단 분류를 요구했으나, 전수 조사 결과 값 원천이 시도 단위까지만 뒷받침됨을 확인하고 시도 고정을 결정했다. 시군구는 crosswalk·시군구급 snapshot이 없고, 행정동(행정동/법정동 불일치)은 구현 제외.
+
+**완료 내용:** `src/lib/data-contract.ts`에 `BoundaryLevel` + `SUPPORTED_DOMESTIC_BOUNDARY_LEVELS=["sido"]` 추가, `DatasetQuery.boundaryLevel` 추가. `src/lib/dataset-catalog.ts`에 `supportedLevels` 선언(domestic `["sido"]`, world `[]`) + `supportsBoundaryLevel` 헬퍼. `src/lib/sgis.ts`에 `DOMESTIC_SIDO_BOUNDARY_QUERY`/`buildDomesticSidoBoundaryQuery` 추가하고 `CreatePage.tsx`가 사용. `DatasetSelector`에 "시도 단위/국가 단위" 칩, 지리 필터 문구·`SgisBoundaryStatusPanel` 라벨을 시도 고정으로 변경. `dataset_catalog` DB에는 level 컬럼이 없어 scope 기준 기본값을 매핑한다.
+
+**검증:** `npm run typecheck` 통과, `npm test` 통과(17개 파일·75개 테스트, 신규 5개), `npm run build` 통과, 로컬 Vite dev 서버에서 `/create/2d/domestic` 200 확인(렌더 검증은 브라우저 도구 부재로 미실시, Production 확인 권장).
+
 ### 2D-03 — KOSIS controlled snapshot과 국내 주제도
 
 **선행:** `2D-01`, `2D-02`, 수업용 표와 코드 기준 확정
@@ -291,9 +299,13 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 - `--write` 후 checksum과 snapshot ID를 기록하고, 검증 후에만 `published`로 전환한다.
 - 조건부 단계구분도, 지역 순위/시계열, 표, provenance, 선택 경계 필터를 실제 KOSIS 값으로 확인한다.
 
+**상태 (2026-09-17, 완료):** 후보(`101/DT_1YL21281/T10/2025`) 확정, DRY-RUN 17행·단일 시점·단일 단위·결측 0 확인, 공식 대응표(`1224→24`, `1236→36`)로 17/17 조인 설계 완료. `codeMap` crosswalk를 `geo-join`·`CreatePage`·조인 패널에 연결. 사용자가 `0005`(적용済 확인 — policy 중복 에러로 기존 적용 판명)/`0006`(적용 성공)을 SQL Editor에서 실행한 뒤, `--write`→검증→`--write --public` 순서로 적재·공개 완료. snapshot ID `b0f7f9c9-a796-46fc-b275-66a0a1ea55e0`, 17행, anon 공개 읽기·실측 SGIS 17경계 조인(`ready` 17/17) 검증済. 실측 중 `PRD_SE="A"` 연간 처리와 checksum 통일(`buildSnapshotChecksum`)을 수정. 정적 카탈로그의 KOSIS 항목을 `ready`로 전환하되 그래프·표 UI가 아직 없어 `capabilities`는 `["map"]`으로 정직하게 표기. KOSIS 그래프·표·provenance 연결은 국내 완성 잔여 작업으로 분리. 상세는 `docs/KOSIS_ADAPTER.md` 참조.
+
 **완료 기준:** 승인 dataset에서 “공개 snapshot이 아직 없습니다”가 사라지고, 조인 실패가 있으면 원인과 미일치 코드가 화면에 나온다.
 
-### 2D-04 — World Bank 세계 2D 수직 슬라이스
+### 2D-04 — World Bank 세계 2D 수직 슬라이스 (보류: 국내 완성 후)
+
+**보류 (2026-09-17, 사용자 결정):** 세계 지도 제작은 국내 지도가 완성된 뒤에 착수한다. 국내 완성의 정의는 KMA·KOSIS가 시도 단위에서 지도·그래프·표·출처·export를 모두 제공하는 상태이며, 현재 KOSIS 그래프·표·provenance가 잔여다.
 
 **선행:** `2D-02`
 
@@ -361,6 +373,10 @@ git log --oneline -5
 | 2026-09-17 | Codex | Claude/OpenCode 교대 작업 규칙·현재 인계 문서·작업 로그 추가 | 미커밋 로컬 변경 | typecheck/test/build 통과 |
 | 2026-09-17 | Claude | `2D-01`: DB catalog repository(`useDatasetCatalog`) 추가, `0006` 운영 미적용을 read-only로 확정 | 미커밋 로컬 변경 | typecheck/test(60)/build 통과, 로컬 폴백 브라우저 확인 |
 | 2026-09-17 | Claude | `2D-02` 1단계-3단계: 공통 data-contract, KMA adapter, CSV export 구현 | 미커밋 로컬 변경 | typecheck/test/build 통과, UI 통합(4단계) 남음 |
+| 2026-09-17 | OpenCode | SIDO-LOCK: 시도 단위 고정 계약·카탈로그 지원수준·UI 문구 반영 | 미커밋 로컬 변경 | typecheck/test(75)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | 2D-03: DT_1YL21281 대응표 확정·DRY-RUN·crosswalk 연결 (적재 전) | 미커밋 로컬 변경 | typecheck/test(79)/build 통과, 0005 적용 확인 후 --write 대기 |
+| 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | 미커밋 로컬 변경 | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
+| 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | 미커밋 로컬 변경 | typecheck/test(81)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 

@@ -12,7 +12,8 @@ import { useDatasetCatalog, type DatasetScope } from "../lib/dataset-catalog";
 import { lawCodeToSgisAdmCds, type ClimateMetric } from "../lib/climate";
 import { fetchLatestPublicKosisDataset, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
-import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
+import { KOSIS_SGG_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
+import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
 import { toNormalizedRecords, toMapLayerSpec } from "../lib/kma-adapter";
 
 const EMPTY_PUBLIC_KOSIS_DATASET: PublicKosisDataset = {
@@ -145,7 +146,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     }
 
     const load = async () => {
-      const boundaryResult = await fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 });
+      const boundaryResult = await fetchSgisBoundaries(buildDomesticSidoBoundaryQuery());
       if (cancelled) return;
       setSgisBoundaries(boundaryResult.data);
       setSgisBoundaryError(boundaryResult.error);
@@ -180,7 +181,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   }, [boundaryCode, sgisBoundaries]);
 
   const boundaryJoin = useMemo(
-    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, kosisDataset.observations),
+    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, kosisDataset.observations, { codeMap: KOSIS_SGG_TO_SGIS_ADM_CD }),
     [kosisDataset.observations, visibleBoundaries],
   );
 
@@ -298,13 +299,14 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
           {!isThreeD && isDomestic && (
             <div className="sidebar-section">
               <p className="eyebrow">02 · GEOGRAPHY FILTER</p>
-              <h3>행정경계 범위</h3>
-              <label className="field-label" htmlFor="boundary-filter">지도에 표시할 경계</label>
+              <h3>시도 경계 범위</h3>
+              <label className="field-label" htmlFor="boundary-filter">지도에 표시할 시도</label>
               <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
                 <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
                 {boundaryOptions.map((feature) => <option key={feature.properties.adm_cd ?? feature.properties.adm_nm} value={feature.properties.adm_cd ?? ""}>{feature.properties.adm_nm ?? feature.properties.adm_cd ?? "이름 없음"}</option>)}
               </select>
-              <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 경계를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
+              <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 시도를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
+              <small className="field-help">국내 2D는 시도 단위로 고정합니다. 시군구·행정동은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않습니다.</small>
               {sgisBoundaryStatus === "loading" && <small className="field-help">SGIS 경계 목록을 불러오는 중입니다…</small>}
               {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
             </div>

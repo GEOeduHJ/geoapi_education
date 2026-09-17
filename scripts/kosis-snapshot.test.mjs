@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildKosisTableUrl,
+  buildSnapshotChecksum,
   normalizeCodeList,
   normalizeKosisRecords,
   parseKosisRecords,
@@ -37,5 +38,20 @@ describe("KOSIS snapshot ingest helpers", () => {
     expect(observations[0].observed_at).toBe("2024-01-01");
     expect(observations[0].attributes.period).toBe("202401");
     expect(observations[0].external_id).toMatch(/^101:DT_TEST:T001:M:202401:/);
+  });
+
+  it("treats response PRD_SE=A as an annual period start", () => {
+    const payload = parseProviderText('[{ORG_ID:"101",TBL_ID:"DT_1YL21281",C1:"11",C1_NM:"서울특별시",ITM_ID:"T10",ITM_NM:"인구천명당 도시공원조성면적",PRD_SE:"A",PRD_DE:"2025",DT:"4.6"}]');
+    const observations = normalizeKosisRecords(parseKosisRecords(payload));
+    expect(observations[0].observed_at).toBe("2025-01-01");
+    expect(observations[0].external_id).toMatch(/^101:DT_1YL21281:T10:A:2025:/);
+  });
+
+  it("produces a stable 64-hex snapshot checksum", () => {
+    const query = { orgId: "101", tblId: "DT_TEST" };
+    const first = buildSnapshotChecksum(query, [{ a: 1 }], [{ b: 2 }]);
+    expect(first).toMatch(/^[0-9a-f]{64}$/);
+    expect(buildSnapshotChecksum(query, [{ a: 1 }], [{ b: 2 }])).toBe(first);
+    expect(buildSnapshotChecksum(query, [{ a: 2 }], [{ b: 2 }])).not.toBe(first);
   });
 });

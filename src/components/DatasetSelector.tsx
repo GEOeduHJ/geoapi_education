@@ -20,6 +20,13 @@ export function DatasetSelector({
   const selected = datasets.find((dataset) => dataset.key === value) ?? datasets[0];
   const ready = datasets.filter((dataset) => dataset.status === "ready");
   const planned = datasets.filter((dataset) => dataset.status === "planned");
+  const boundaryLabel = !selected
+    ? null
+    : selected.scope === "world"
+      ? "국가 단위"
+      : selected.supportedLevels.includes("sido")
+        ? "시도 단위"
+        : "경계 미정";
 
   return (
     <div className="dataset-selector">
@@ -40,7 +47,7 @@ export function DatasetSelector({
         <div className={`dataset-selector__detail dataset-selector__detail--${selected.status}`}>
           <div className="dataset-selector__title"><strong>{selected.title}</strong><span>{selected.status === "ready" ? "공개 사용 가능" : "controlled ingest 대기"}</span></div>
           <p>{selected.description}</p>
-          <div className="dataset-selector__meta"><span>{selected.space}</span><span>{selected.coverage}</span><span>{selected.period.label}</span><span>{selected.capabilities.map(capabilityLabel).join(" · ")}</span></div>
+          <div className="dataset-selector__meta"><span>{selected.space}</span><span>{selected.coverage}</span><span>{selected.period.label}</span><span>{selected.capabilities.map(capabilityLabel).join(" · ")}</span>{boundaryLabel && <span>{boundaryLabel}</span>}</div>
         </div>
       )}
     </div>

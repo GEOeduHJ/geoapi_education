@@ -152,9 +152,9 @@ Supabase는 로그인 provider가 아니다. 이 프로젝트에서의 역할은
 | `climate_*` | KMA 관측소·일자료·월 요약 | 공개 자료만 |
 | `dataset_catalog` | 학습자에게 허용한 데이터셋과 기능/coverage | `status='published'`만 |
 
-## 7. 행정경계 필터 규칙
+## 7. 행정경계 필터 규칙 (2026-09-17 결정: 시도 단위로 고정)
 
-1. `level`(시도/시군구/읍면동), `year`, `parentCode`, `selectedCodes`를 query에 저장한다.
+1. `level`은 `"sido"`로 고정하고, `year=2025`, `parentCode=non`, `selectedCodes`만 query에 저장한다. 시군구·읍면동(행정동/법정동)은 값 원천과 코드 대응표가 확보될 때까지 지원하지 않는다. 근거: KOSIS 후보 표는 시도급까지만 검증됐고(`geo_observations` 0행), KMA는 10개 관측소로 시군구를 채울 수 없으며, 시군구 5자리·읍면동 8자리 crosswalk가 없다.
 2. 경계 API 응답과 값 snapshot의 코드는 같은 기준연도에서 `code === adm_cd`일 때만 조인한다.
 3. `전체`는 해당 응답의 모든 feature, `선택`은 `selectedCodes`와 일치하는 feature만 렌더링한다.
 4. 동일한 filtered set을 지도 layer, 범례 min/max, 그래프 rows, 표 rows, export에 전달한다.

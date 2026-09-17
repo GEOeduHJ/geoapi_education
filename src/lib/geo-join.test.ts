@@ -95,4 +95,31 @@ describe("KOSIS to SGIS boundary join", () => {
     expect(result.status).toBe("no-boundaries");
     expect(result.values).toEqual({});
   });
+
+  it("applies an official crosswalk before matching and reports it", () => {
+    const result = joinKosisObservationsToSgisBoundaries(
+      boundaries(["11", "24", "36"]),
+      [observation("o-11", "11", 100), observation("o-gj", "1224", 200), observation("o-jn", "1236", 300)],
+      { codeMap: { "1224": "24", "1236": "36" } },
+    );
+
+    expect(result.status).toBe("ready");
+    expect(result.matchedCount).toBe(3);
+    expect(result.missingBoundaryCount).toBe(0);
+    expect(result.crosswalk).toEqual([{ from: "1224", to: "24" }, { from: "1236", to: "36" }]);
+    expect(result.values["24"]).toEqual(expect.objectContaining({ value: 200, observationId: "o-gj" }));
+    expect(result.values["36"]).toEqual(expect.objectContaining({ value: 300, observationId: "o-jn" }));
+  });
+
+  it("leaves codes untouched when no crosswalk entry exists", () => {
+    const result = joinKosisObservationsToSgisBoundaries(
+      boundaries(["11", "21"]),
+      [observation("o-11", "11", 100)],
+      { codeMap: { "1224": "24" } },
+    );
+
+    expect(result.status).toBe("ready");
+    expect(result.crosswalk).toEqual([]);
+    expect(result.matchedCount).toBe(1);
+  });
 });

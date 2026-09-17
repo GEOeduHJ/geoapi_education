@@ -362,7 +362,8 @@ export function parseKosisRecords(payload) {
 function periodStart(periodType, period) {
   if (!period) return null;
   const value = period.replace(/[^0-9]/g, "");
-  if ((periodType === "Y" || periodType === "F") && /^\d{4}$/.test(value)) return `${value}-01-01`;
+  // KOSIS 응답의 PRD_SE는 요청 코드(Y)와 다르게 연간을 "A"로 반환할 수 있다.
+  if ((periodType === "Y" || periodType === "F" || periodType === "A") && /^\d{4}$/.test(value)) return `${value}-01-01`;
   if (periodType === "M" && /^\d{6}$/.test(value) && Number(value.slice(4)) >= 1 && Number(value.slice(4)) <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
   if ((periodType === "Q" || periodType === "S") && /^\d{5,6}$/.test(value)) return `${value.slice(0, 4)}-01-01`;
   if (periodType === "D" && /^\d{8}$/.test(value)) return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6)}`;
@@ -407,6 +408,11 @@ export function normalizeKosisRecords(records) {
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+// DRY-RUN 로그와 source_snapshots.checksum이 같은 값을 가리키도록 직렬화 모양을 고정한다.
+export function buildSnapshotChecksum(query, rawPayload, metadataRows) {
+  return sha256(JSON.stringify({ query, rawPayload, metadataRows }));
 }
 
 function safeBody(body, secrets = []) {
@@ -478,7 +484,6 @@ async function writeSnapshot(config, query, rawPayload, metadataRows, records, o
     terms_summary: "KOSIS 통계표의 요청 파라미터·원자료·metadata·checksum을 보존하고 교육자료에 출처를 표시.",
   }], "source_key");
   const dataSourceId = await findOne(config, "data_sources", { source_key: SUPABASE_SOURCE_KEY });
-  const serialized = JSON.stringify({ query, rawPayload, metadataRows });
   const requestFingerprint = `kosis-statistics-v1:${sha256(JSON.stringify(query)).slice(0, 32)}`;
   const dates = records.map((record) => periodStart(record.periodType, record.period)).filter(Boolean).sort();
   await upsertRows(config, "source_snapshots", [{
@@ -497,7 +502,7 @@ async function writeSnapshot(config, query, rawPayload, metadataRows, records, o
       normalized: { row_count: records.length, observation_count: observations.length, region_rule: "지역·행정구역 명칭 우선, 없으면 첫 분류" },
     },
     row_count: records.length,
-    checksum: sha256(serialized),
+    checksum: buildSnapshotChecksum(query, rawPayload, metadataRows),
     is_public: isPublic,
   }], "data_source_id,request_fingerprint,schema_version");
   const snapshotId = await findOne(config, "source_snapshots", {
@@ -553,7 +558,7 @@ async function main() {
   const regionCodes = [...new Set(observations.map((observation) => observation.region_code).filter(Boolean))];
   console.log(`KOSIS ${query.orgId}/${query.tblId} · ${records.length.toLocaleString("ko-KR")}행 · ${options.write ? "WRITE" : "DRY-RUN"}`);
   console.log(`periods: ${periods.slice(0, 8).join(", ")}${periods.length > 8 ? " …" : ""} · units: ${units.join(", ") || "응답 없음"} · region codes: ${regionCodes.length.toLocaleString("ko-KR")}개`);
-  console.log(`metadata: ${metadataRows.length.toLocaleString("ko-KR")}개 · checksum: ${sha256(JSON.stringify({ query, tableRows, metadataRows })).slice(0, 16)}…`);
+  console.log(`metadata: ${metadataRows.length.toLocaleString("ko-KR")}개 · checksum: ${buildSnapshotChecksum(query, tableRows, metadataRows).slice(0, 16)}…`);
 
   if (!options.write) {
     console.log("검증만 완료했습니다. Supabase 적재는 같은 명령에 --write를 추가하세요.");

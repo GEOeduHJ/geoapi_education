@@ -185,3 +185,47 @@ Publishable Key의 공개 SELECT RLS만 사용한다.
 다만 현재 KOSIS 응답에는 `12=전남광주통합특별시`가 포함되고 SGIS 2025 경계에는
 기존 `24=광주광역시`, `36=전라남도`가 남아 있어 전국 17개 완전 결합으로 볼 수 없다.
 따라서 이 후보도 코드 대응표 또는 경계 기준연도 확정 전에는 공개 적재하지 않는다.
+
+## 2026-09-17 — `DT_1YL21281` 대응표 확정과 DRY-RUN 재검증 (2D-03)
+
+위 보류 사유가 해소됐다. `getMeta type=ITM` 응답 22행에서 분류 계층을 직접 확인했다.
+
+| 항목 | 값 |
+|---|---|
+| 표 | `orgId=101`, `tblId=DT_1YL21281` |
+| 분류 | `objId=SGG` (행정구역별) |
+| 지표 | `itmId=T10` 인구천명당 도시공원조성면적 (A÷B×1000), 단위 `천㎡` |
+| 분모 | `T001` 총도시공원면적 (천㎡, A) ÷ `T002` 도시지역인구 (명, B) — snapshot은 단일 항목 `T10`만 적재하고 분모 의미는 문서로 보존 |
+| 주기·시점 | `prdSe=Y`, `2025~2025` 단일 시점 |
+| 지역코드 | 15개 2자리 시도 + `1224` 광주광역시 + `1236` 전라남도 (둘 다 상위 `12`의 하위 코드). `00` 전국은 요청에서 제외 |
+| SGIS 조인 | 15개 exact + `1224→24`, `1236→36` 공식 대응표로 **17/17 완전 결합**, 결측 0 |
+
+대응표는 이름 추정이 아니라 KOSIS metadata의 상위·하위 분류 linkage에 기반한다.
+원자료 `region_code`는 그대로 보존하고 조인 시점에만 변환한다
+(`src/lib/kosis-crosswalk.ts`, `geo-join.ts`의 `codeMap` 옵션, 조인 패널에 적용 내역 표시).
+
+DRY-RUN 결과: `17행 · periods: 2025 · units: 천㎡ · region codes: 17개 · metadata: 22개`.
+17행 전부 숫자값(예: 세종 61.9, 전남 27.1, 서울 4.6 — 단위 천㎡)이며 `value=null` 없음.
+
+적재 명령(실행 보류 — `0005` migration 적용 확인 후):
+
+```bash
+node scripts/kosis-snapshot.mjs \
+  --org-id=101 --tbl-id=DT_1YL21281 \
+  --obj-l1=11,21,22,23,25,26,29,31,32,33,34,35,37,38,39,1224,1236 \
+  --itm-id=T10 --prd-se=Y --start-prd-de=2025 --end-prd-de=2025 \
+  --write --public
+```
+
+`--write`는 `0005`의 unique index(`snapshot_id, external_id`)가 있어야 upsert가 동작하므로,
+Supabase SQL Editor 적용을 먼저 확인한다. `--public`은 적재 검증 후에 같은 명령으로 전환한다.
+
+## 2026-09-17 — 적재·공개 완료 (2D-03)
+
+- `0005`는 재실행 시 policy 중복 에러(`42710`)가 나왔는데, 이는 이전에 전체가 이미 적용됐다는 증거다(트랜잭션 원자성상 policy가 있으면 index도 있다). 동일 snapshot ID로의 upsert 재실행이 성공해 unique index 동작도 기능적으로 확인했다.
+- `0006`은 `Success`로 적용됐고, anon key로 `dataset_catalog` 조회가 `404` → `200` (0행)으로 바뀌었다.
+- `--write` (비공개) → 검증 → `--write --public` 순서로 실행. snapshot ID `b0f7f9c9-a796-46fc-b275-66a0a1ea55e0`, 17행, checksum `44b8a961090c2fb5…` (DRY-RUN 로그와 저장값이 일치하도록 `buildSnapshotChecksum`으로 통일).
+- 비공개 검증: service-role로 17행·결측 0·`valid_from/to=2025-01-01` 확인, anon 조회 0행(RLS 정상).
+- 공개 검증(anon key, 브라우저와 동일 경로): snapshot 1행·관측값 17행·결측 0·`observed_at=2025-01-01`·단일 단위.
+- 실측 조인 검증: Production SGIS 2025 시도 17개 + 공개 snapshot으로 실제 `joinKosisObservationsToSgisBoundaries` 실행 → `ready`, 17/17 결합, `1224→24`·`1236→36` 대응표 적용 (일회성 테스트 후 삭제, suite에는 fixture 기반 테스트만 유지).
+- 실측 중 수정 2건: (1) KOSIS 응답 `PRD_SE`가 연간을 `"A"`로 반환해 `observed_at`이 null이 되던 문제 → `periodStart`에 `"A"` 처리 추가. (2) DRY-RUN 로그 checksum과 저장 checksum의 직렬화 모양 불일치 → `buildSnapshotChecksum` 공유 헬퍼로 통일.

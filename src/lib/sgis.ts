@@ -30,6 +30,22 @@ export interface SgisBoundaryQuery {
   lowSearch?: 0 | 1 | 2;
 }
 
+/**
+ * domestic 2D의 고정 경계 조회. 2026-09-17 결정: 값 원천이 시도 단위까지만
+ * 검증됐으므로 기준연도 2025·전국 시도(`non` + `lowSearch: 1`)로 고정한다.
+ * 시군구·읍면동 조회를 추가하려면 crosswalk·snapshot 검증이 선행되어야 하며,
+ * 이 상수를 직접 바꾸는 대신 level별 builder를 새로 만든다.
+ */
+export const DOMESTIC_SIDO_BOUNDARY_QUERY: Required<SgisBoundaryQuery> = {
+  year: 2025,
+  admCd: "non",
+  lowSearch: 1,
+};
+
+export function buildDomesticSidoBoundaryQuery(): SgisBoundaryQuery {
+  return { ...DOMESTIC_SIDO_BOUNDARY_QUERY };
+}
+
 export interface SgisBoundaryResponse {
   query: { year: number; admCd: string; lowSearch: number };
   sourceCrs: string;
