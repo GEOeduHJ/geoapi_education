@@ -1,6 +1,6 @@
 # 2D 자료 제작 구현 계획
 
-> 이 문서를 2D 기능 개발의 실행 기준으로 사용한다. API별 인증·한도·약관은 [API 키 매니페스트](API_KEY_MANIFEST.md), 기존 전체 설계는 [개발 계획](DEVELOPMENT_PLAN.md)을 참조한다.
+> 이 문서를 2D 기능 개발의 실행 기준으로 사용한다. 교대 작업의 현재 상태와 다음 task는 [AI 작업 인계 문서](AI_HANDOFF.md), 에이전트 공통 규칙은 [AGENTS.md](../AGENTS.md)를 먼저 확인한다. API별 인증·한도·약관은 [API 키 매니페스트](API_KEY_MANIFEST.md), 기존 전체 설계는 [개발 계획](DEVELOPMENT_PLAN.md)을 참조한다.
 
 ## 1. 목표와 완료 조건
 

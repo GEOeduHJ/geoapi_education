@@ -1,0 +1,107 @@
+# 에이전트 작업 로그
+
+Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록한다. 한 항목은 하나의 작업 단위를 뜻한다. 기존 기록을 수정하거나 성공하지 않은 작업을 완료로 바꾸지 않는다.
+
+## 기록 원칙
+
+- 날짜, 에이전트, task ID, 변경 범위, 검증 결과, 커밋을 남긴다.
+- 키·토큰·비밀번호·Supabase secret·API 응답 원문은 남기지 않는다.
+- 운영 DB나 Production을 확인했다면 URL·경로·행 수·상태만 기록한다.
+- 실패는 실패로 기록하고, 코드 실패인지 환경·권한·외부 API 문제인지 구분한다.
+- 상세한 현재 상태와 다음 작업은 [`AI_HANDOFF.md`](AI_HANDOFF.md)에 갱신한다.
+
+## 작업 기록
+
+### 2026-09-17 — Codex — 2D-BASELINE
+
+- 결과: 완료된 1차 수직 슬라이스
+- 변경: curated dataset catalog, 국내/세계 2D route, KMA ASOS 2D 지도·그래프·표, SGIS 선택 경계, VWorld 배경 선택, map/chart PNG/PDF
+- 데이터: KMA 2016~2025 10개 관측소·36,530 일자료·1,200 월 요약을 Supabase에서 사용
+- 검증: typecheck/test/build 통과; Production `/create/2d/domestic`에서 17개 경계·10개 관측소와 `서울특별시` 1개 필터 확인
+- 주의: KOSIS는 코드 체계 검증 전까지 public snapshot을 만들지 않음
+- 커밋: `183ed28 feat: start curated 2d data workspace`
+
+### 2026-09-17 — Codex — 2D-VERIFY
+
+- 결과: 완료
+- 변경: 2D 구현 진척도·운영 브라우저 검증·다음 작업 문서화
+- 검증: Production 국내/세계 2D, 브라우저 오류·경고 없음, 운영 데이터 범위 확인
+- 주의: `supabase/migrations/0006_dataset_catalog.sql`은 저장소에 있으나 운영 적용 여부 미확인
+- 커밋: `cd60ed5 docs: record 2d progress and verification`
+
+### 2026-09-17 — Codex — DOCS-HANDOFF
+
+- 결과: 완료된 로컬 문서화
+- 변경: `AGENTS.md`, `CLAUDE.md`, `OPENCODE.md`, `docs/AI_HANDOFF.md`, `docs/AGENT_WORK_LOG.md`, README/2D 계획의 교대 작업 진입점
+- 결정: 개발 완료 전 중간 커밋·GitHub push를 보류하고, 인계 문서와 작업 로그로 로컬 상태를 관리
+- 검증: `git diff --check` 통과; `npm run typecheck`, `npm test`(15개 파일·51개 테스트), `npm run build` 통과
+- 브라우저/API: 코드 변경 없는 문서 작업이므로 추가 브라우저 검증 없음; 기존 Production 검증은 `2D-VERIFY` 기록 참조
+- 차단/주의: 현재 변경은 의도적으로 미커밋 로컬 상태
+- 다음 작업: `2D-01` — `0005/0006` migration 상태 확인과 DB catalog repository 구현
+- 커밋: `미커밋 로컬 변경`
+
+### 2026-09-17 — Claude — 2D-01
+
+- 결과: 완료
+- 변경: `src/lib/dataset-catalog.ts`, `src/components/DatasetSelector.tsx`, `src/pages/CreatePage.tsx`, `src/lib/dataset-catalog.test.ts`, `.claude/launch.json`(로컬 브라우저 검증용 dev server 설정, 신규), `docs/AI_HANDOFF.md`
+- 결정/데이터: Supabase REST를 anon key로 직접 read-only 조회해 `dataset_catalog`(0006)가 운영에 미적용(404 `PGRST205`)임을 확정하고, `geo_observations`(0005 대상 테이블)는 anon 조회 가능함을 확인. DB `status`(draft/published/retired)와 앱 `DatasetStatus`(ready/planned)를 서로 다른 축으로 보고 `status === "published" && storage_mode !== "planned"`일 때만 ready로 매핑(`mapDatasetCatalogRow`). 정적 catalog는 키 단위로 published 행에 override되고, DB가 비어있거나 실패하면 기존 정적 목록을 그대로 반환(`mergeDatasetCatalog`). `getDatasets`/`getDataset`(동기, 정적 전용)는 그대로 두고, `DatasetSelector`/`CreatePage`는 새 `useDatasetCatalog(scope)` 훅으로 전환.
+- 검증: `npm run typecheck` 통과, `npm test` 통과(15개 파일·60개 테스트, `dataset-catalog.test.ts` 2→11개), `npm run build` 통과
+- 브라우저/API: 로컬 Vite(`http://localhost:5173`, `.claude/launch.json` 신규 추가)에서 `/create/2d/domestic`, `/create/2d/world` 확인. 데이터셋 드롭다운 구성이 기존과 동일(국내 ready 1·planned 2, 세계 planned 3개, 라벨·개수 동일). `performance` resource timing으로 `dataset_catalog` PostgREST 요청이 페이지당 1회만 발생하고 `404`/`PGRST205`로 실패해 정적 목록으로 조용히 폴백됨을 확인. 이 폴백 경로에서 화면에 별도 에러 배너나 새 콘솔 경고 없음.
+- 차단/주의: (1) `0006_dataset_catalog.sql`이 운영 Supabase에 미적용 상태로 확정됨 — 사용자가 Supabase SQL Editor에서 `0005`, `0006`을 적용해야 published override 경로를 실제로 검증할 수 있음(이 세션은 service-role/DB 실행 권한 없음). (2) 이번 작업과 무관하게 로컬 Vite에서 `climate_period_summaries` Supabase 조회가 매번 500을 반환함(관측소·일자료 조회는 200 정상)과 SGIS 경계 패널이 로컬에서 "경계 목록을 읽지 못했습니다"를 표시함을 발견함 — 둘 다 이번에 변경하지 않은 `src/lib/climate.ts`/`src/lib/sgis.ts` 관련이며, 후자는 AGENTS.md가 이미 문서화한 "로컬 Vite가 `api/*.ts`를 자동 실행하지 않는다"는 제약과 일치함. Production 또는 `vercel dev`에서 재확인 필요.
+- 다음 작업: `2D-02` — 공통 시각화 계약·provenance·표 CSV. 단, 그 전에 사용자가 Supabase SQL Editor에서 `0005`/`0006`을 적용하고, 이번에 발견한 `climate_period_summaries` 500이 Production에서도 재현되는지 확인 필요.
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — Claude — 2D-02 (1단계-3단계)
+
+- 결과: 부분 완료 (Phase 1-3 완료, Phase 4 UI 통합 남음)
+- 변경: `src/lib/data-contract.ts` (신규), `src/lib/kma-adapter.ts` (신규), `src/lib/material-export.ts` (CSV export 추가)
+- 결정/데이터: 공통 시각화 계약 5개 인터페이스 정의 (DatasetQuery, NormalizedRecord, MapLayerSpec, ChartSpec, TableModel, Provenance). KMA 데이터를 이 계약으로 변환하는 adapter 함수 추가. CSV export에 UTF-8 BOM 포함, 파일명 정책 적용.
+- 검증: `npm run typecheck` 통과, `npm test` 통과(60 tests), `npm run build` 통과
+- 브라우저/API: UI 통합 전이므로 현재까지의 변경은 화면상 영향 없음. 다음 단계에서 Climate2DWorkspace와 CreatePage를 리팩토링할 때 adapter를 사용하고 Provenance panel을 추가해야 함.
+- 차단/주의: (1) 새로운 타입들이 실제로 사용되지 않고 있음 — 다음 작업자가 Climate2DWorkspace/CreatePage 리팩토링 시 adapter를 통합해야 함. (2) toTableModel에서 metadata 필드에 값을 넣는 방식이 임시적 — 실제 TableModel.records 구조는 table 렌더링 시점에 확정되어야 함.
+- 다음 작업: `2D-02` 4단계 — Climate2DWorkspace를 adapter 기반으로 리팩토링하고 CSV export 버튼 추가. CreatePage에 Provenance panel 통합. 지도/차트/표/CSV가 동일 필터를 공유하는지 브라우저에서 확인.
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — Claude — 2D-02 (계획 수정 + 부분 구현)
+
+- 결과: 부분 완료 (경계 집계 로직 구현, choropleth 렌더링 미확인)
+- 변경: `src/lib/climate.ts` (STATION_TO_ADM_CODE 매핑), `src/lib/kma-adapter.ts` (toNormalizedRecords 재설계, aggregateByBoundary, toMapLayerSpec 재설계), `src/pages/CreatePage.tsx` (kmaAggregatedBoundaryValues 계산, VWorld2DMap props 변경)
+- 결정/데이터: 사용자 피드백에 따라 2D-02 계획 전면 수정: 점 기반 시각화 → 행정경계 기반 choropleth. KMA 관측소를 행정경계별로 aggregation하고, 경계별 평균값을 BoundaryJoinValue 형식으로 변환해 VWorld2DMap에 전달. STATION_TO_ADM_CODE 매핑 추가 (10개 기본 관측소를 11/26/27/29/30/31/36/41/42/50 경계코드로).
+- 검증: `npm run typecheck` 통과, `npm run build` 통과. 브라우저 `/create/2d/domestic`에서 지도 렌더링 중이나, 표시되는 객체가 점 기반인지 경계 기반인지 VWorld2DMap 렌더링 로직에서 확인 필요.
+- 브라우저/API: 로컬 Vite (`localhost:5173/create/2d/domestic`). 지도가 표시되고 "18개 경계도"라는 범례가 보이나, 화면상 점들이 여전히 관측소 위치처럼 보임. stationValues=null, visibleStationIds=[], showStations=false로 설정했으므로 지점 레이어가 비활성화되어야 함.
+- 차단/주의: (1) VWorld2DMap 또는 vworld2d.ts의 경계 렌더링 로직(createBoundaryLayer, updateVWorld2DBoundaryLayer)에서 aggregated 데이터(BoundaryJoinValue 형식)를 제대로 처리하는지 확인 필요. 특히 boundaryValues의 색상 맵핑 로직이 정상인지 검증. (2) STATION_TO_ADM_CODE 매핑이 실제 SGIS adm_cd와 일치하는지 SGIS 데이터 로드 후 비교 필요 (현재 추정치).
+- 다음 작업: VWorld2D 경계 렌더링 로직 확인 + kmaAggregatedBoundaryValues가 실제로 생성·전달되는지 브라우저 디버거 검증 + 필요시 색상 맵핑 또는 aggregation 로직 수정.
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — Claude — 2D-02 (choropleth 렌더링 버그 근본 원인 수정)
+
+- 결과: 완료 (KMA choropleth 렌더링 파이프라인 검증 완료)
+- 변경: `src/lib/climate.ts` (`STATION_TO_ADM_CODE` 삭제 → `LAW_CODE_PREFIX_TO_SGIS_ADM_CD` + `lawCodeToSgisAdmCd()`로 교체), `src/lib/kma-adapter.ts` (`toNormalizedRecords`가 `lawCodeToSgisAdmCd` 사용하도록 수정), `src/pages/CreatePage.tsx` (기존 `station.law_code?.slice(0,2) === boundaryCode` 버그도 동일 함수로 수정, `boundaryNames`/`boundaryValueLabel` 추가), `src/components/VWorld2DMap.tsx` (`boundaryValueLabel` prop 추가, 범례 "KOSIS 값" 하드코딩 제거), `src/lib/climate.test.ts`·`src/lib/kma-adapter.test.ts`(신규) 테스트 추가.
+- 결정/데이터: **근본 원인** — 이전 작업에서 만든 `STATION_TO_ADM_CODE`가 표준 법정동코드 체계(부산=26 등)를 SGIS `adm_cd`인 줄 알고 하드코딩했으나, `/api/sgis-boundary` 실측 결과 SGIS는 완전히 다른 자체 순번(부산=21, 대구=22, 인천=23 …)을 쓴다는 걸 Production에서 직접 확인함(`geoapieducation.vercel.app/api/sgis-boundary?year=2025&admCd=non&lowSearch=1`). 더 중요한 발견: 기존 `CreatePage.tsx`의 `station.law_code?.slice(0,2) === boundaryCode` 필터도 같은 두 체계를 직접 비교하고 있어서, 서울(둘 다 "11")만 우연히 맞고 나머지 16개 시도는 전부 관측소 필터링이 깨져 있었음(2D-01 기록의 "서울특별시 1개 필터만 확인"이 이 버그를 가려온 것). `climate_stations.law_code`(법정동코드) 앞 2자리 → SGIS `adm_cd` lookup table(`LAW_CODE_PREFIX_TO_SGIS_ADM_CD`)을 만들어 두 곳 모두 통일. Production REST 조회로 실제 관측소 9곳의 `law_code`를 확인해 매핑을 검증(9/10 정확히 일치, 나머지 1곳은 아래 주의사항 참조).
+- 검증: `npm run typecheck` 통과, `npm test` 통과(16개 파일·67개 테스트, `climate.test.ts` 4→6, `kma-adapter.test.ts` 신규 5개), `npm run build` 통과.
+- 브라우저/API: 로컬 Vite(`localhost:5173/create/2d/domestic`)에서 `window.fetch`를 패치해 `/api/sgis-boundary` 응답을 mock(실제 SGIS `adm_cd`/`adm_nm` + 단순 격자 geometry, Supabase `climate_stations`/관측 데이터는 실제 값 그대로 사용)한 뒤 SPA 내 라우트 전환으로 재요청을 트리거해 전체 파이프라인을 시각적으로 검증함. 결과: "17개 경계 · 8개 경계값 · 13.178–17.211°C" 범례가 실제 9개 유효 관측소(광주 제외, 춘천+강릉은 강원으로 합산)의 값과 정확히 일치. `boundaryCode`를 "부산광역시"(adm_cd=21)로 바꾸면 "1개 경계 · 1개 경계값 · 15.704–15.704°C"로 부산 관측소 실측값과 정확히 일치해, 기존에 깨져 있던 지역 필터도 함께 고쳐졌음을 확인. **참고**: 로컬 Vite는 `/api/*.ts`를 실행하지 않는 기존 제약(AGENTS.md 기록)이 있어 이 mock 검증은 로컬 전용 임시 기법이며 코드에는 남기지 않음; `vercel dev`도 시도했으나 이 저장소의 Vite 7 설정과 충돌해(`index.html` import-analysis 파싱 오류) 로컬에서 사용 불가로 확인됨 — Production 또는 향후 Vite/vercel dev 호환성이 맞는 환경에서 실제 SGIS 응답으로 최종 1회 확인 필요.
+- 차단/주의: (1) KMA station_id `156`(광주) 관측소의 `law_code`가 `"1230010900"`으로 실제 존재하지 않는 법정동코드 접두사("12")이고 `address`도 "전남광주통합특별시 북구 운암동"이라는 존재하지 않는 지명임 — DB 시드 데이터 자체의 품질 문제로 이번 작업 범위 밖. 현재는 `lawCodeToSgisAdmCd`가 `null`을 반환해 이 관측소만 경계 집계에서 조용히 제외됨(에러 없이 스킵, 지도가 깨지지 않음). 다음 작업자가 `climate_stations` 테이블에서 이 행의 `law_code`/`address`를 실제 광주광역시 값으로 정정 필요. (2) `LAW_CODE_PREFIX_TO_SGIS_ADM_CD`는 현재 KMA 10개 기본 관측소가 걸치는 9개 시도만이 아니라 17개 시도 전체를 채워뒀지만, 법정동코드의 강원(42→51 개편)·전북(45→52 개편) 신·구 코드를 모두 넣어둔 것 외에는 다른 시도 실측 검증은 못 했음(Production SGIS 응답으로 코드→이름만 대조, KMA 관측소가 없는 시도는 law_code 실측 불가).
+- 다음 작업: (선택) 광주 관측소 `law_code`/`address` 데이터 정정을 사용자에게 요청. `2D-02` 나머지 — Provenance panel을 CreatePage에 표시하는 UI 작업이 아직 남아있음(계획서 5단계 일부).
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — Claude — 2D-02b (전남광주통합특별시 fan-out + Provenance/CSV UI 연결)
+
+- 결과: 완료 (`2D-02` 전체 완료 처리)
+- 변경: `src/lib/climate.ts`(`lawCodeToSgisAdmCd`→`lawCodeToSgisAdmCds`, `LAW_CODE_PREFIX_TO_SGIS_ADM_CD` 값 타입 `string`→`string[]`, `"12": ["24","36"]` 추가), `src/lib/data-contract.ts`(`NormalizedRecord.location.admCds?: string[]` 추가), `src/lib/kma-adapter.ts`(`toNormalizedRecords`가 `admCds` 채움, `aggregateByBoundary`가 `admCds`를 순회하며 fan-out 집계), `src/pages/CreatePage.tsx`(`visibleStationIds` 필터를 `lawCodeToSgisAdmCds(...).includes(boundaryCode)`로 수정), `src/components/MaterialExportActions.tsx`(선택적 `onExportCsv` prop, CSV 버튼), `src/components/ProvenancePanel.tsx`(신규), `src/components/Climate2DWorkspace.tsx`(CSV 핸들러·Provenance panel 연결, 기존 `climate-footnote` 제거), `src/app/styles.css`(`.provenance-panel*` 규칙 추가), `src/lib/climate.test.ts`·`src/lib/kma-adapter.test.ts`(fan-out 테스트 추가).
+- 결정/데이터: **이전 세션의 "차단/주의" 기록(바로 위 항목)이 오판이었음이 밝혀짐** — 광주 관측소의 `law_code`("1230010900")와 `address`("전남광주통합특별시...")는 잘못된 시드 데이터가 아니라, 2026-07-01 실제 출범한 광주광역시·전라남도 행정통합("전남광주통합특별시", [위키백과](https://ko.wikipedia.org/wiki/전남광주통합특별시))을 반영한 올바른 최신 데이터였음(사용자가 직접 확인·정정 요청). 다만 Production `/api/sgis-years`를 호출해 확인한 결과 SGIS의 `tboudary_yr`(경계 polygon 존재 연도)는 2025까지만 있어, SGIS가 아직 통합 후 경계를 발행하지 않은 상태임 — 즉 우리 DB(law_code)는 새 코드를 반영했지만 SGIS 경계 도형은 옛 상태(광주 SGIS adm_cd `24`, 전남 `36`, 별개 도형) 그대로. 이 lag를 메우기 위해 법정동코드→SGIS adm_cd 매핑을 1:1에서 1:N으로 바꿔, "12" 접두사가 `["24","36"]` 둘 다를 가리키도록 하고 `aggregateByBoundary`가 한 관측소 값을 여러 경계 그룹에 동시에 채우도록(fan-out) 구현. 동시에 국내 2D 데이터 완성도를 Supabase 직접 조회로 점검(`climate_stations` 10행=기본 관측소와 정확히 일치, `geo_observations`(KOSIS) 0행 — 숨겨진 미사용 데이터셋 없음 확인) → 실제 남은 gap은 새 데이터셋이 아니라 이미 구현된 `kma-adapter.ts`의 `toChartSpec`/`toTableModel`/`toProvenance`와 `exportTableAsCsv`가 UI에 연결되지 않은 것뿐임을 확인, 이번에 연결함.
+- 검증: `npm run typecheck` 통과, `npm test` 통과(16개 파일·70개 테스트, `climate.test.ts` 6→7 [전남광주통합특별시 fan-out 케이스 추가], `kma-adapter.test.ts` 5→7), `npm run build` 통과.
+- 브라우저/API: 로컬 Vite(`localhost:5173/create/2d/domestic`)에서 이전과 동일한 `window.fetch` SGIS mock 기법으로 검증. (1) 전체 시도 선택 시 "10개 경계값"(이전 세션 8개에서 광주 fan-out으로 +2 정확히 증가) 확인. (2) "광주광역시"(adm_cd 24)와 "전라남도"(adm_cd 36)를 각각 선택 — 둘 다 "1개 경계 · 2개 경계값 · 15.025–15.025°C"로 동일한 광주 관측소 값이 나옴을 확인(경계값 개수가 2로 나오는 건 boundaryValues 딕셔너리 자체가 fan-out으로 24/36 두 키를 갖기 때문이며, 실제 화면에 그려지는 도형은 선택된 1개뿐이라 렌더링 오류 아님). (3) Climate2DWorkspace에 새 "CSV 표" 버튼이 나타나고 클릭 시 "CSV 파일을 다운로드했습니다" 성공 메시지 확인. (4) Provenance panel이 기존 `climate-footnote` 자리에 렌더링되어 신청기간/실제기간/단위/관측치 수(36,522)/결측률(<1%)/snapshot ID(kma-asos-10y)/출처 링크를 모두 표시함을 확인.
+- 차단/주의: (1) 여전히 로컬 Vite는 `/api/*.ts`를 실행하지 않아 실제 SGIS 응답으로 최종 검증은 못 함(mock 기법으로 로직만 검증) — Production 배포 후 1회 확인 권장. (2) `vercel dev`는 이 저장소의 Vite 7 설정과 충돌해 로컬에서 사용 불가로 재확인됨(이전 세션 기록과 동일). (3) SGIS `tboudary_yr`에 `2026`이 추가되면(SGIS가 통합 경계를 발행하면) `LAW_CODE_PREFIX_TO_SGIS_ADM_CD["12"]`의 fan-out 매핑과 `api/sgis-boundary.ts`의 `MAX_YEAR=2025` 캡을 함께 재검토해야 함 — 그때는 광주·전남이 SGIS에서도 폴리곤 하나로 합쳐질 가능성이 있음.
+- 다음 작업: `2D-03`(KOSIS controlled snapshot) 착수 가능. 그 전에 SGIS `tboudary_yr`를 가끔 확인해 2026이 추가됐는지 확인 권장(위 주의사항 (3)).
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
+
+- 결과: [완료|부분 완료|차단]
+- 변경:
+- 결정/데이터:
+- 검증:
+- 브라우저/API:
+- 차단/주의:
+- 다음 작업:
+- 커밋:

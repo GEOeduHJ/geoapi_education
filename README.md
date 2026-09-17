@@ -2,6 +2,8 @@
 
 지리교육을 위한 자료 제작·자료 활용 탐구 학습 사이트의 초기 구현이다.
 
+Codex·Claude·OpenCode가 교대로 작업할 때는 먼저 [에이전트 공통 작업 규칙](AGENTS.md)을 읽고, 현재 상태와 다음 작업은 [AI 작업 인계 문서](docs/AI_HANDOFF.md)를 기준으로 한다.
+
 ## 빠른 시작
 
 ```bash
@@ -39,6 +41,11 @@ node scripts/smoke-api.mjs
 
 ## 문서
 
+- [에이전트 공통 작업 규칙](AGENTS.md)
+- [Claude 작업 진입점](CLAUDE.md)
+- [OpenCode 작업 진입점](OPENCODE.md)
+- [AI 작업 인계 문서](docs/AI_HANDOFF.md)
+- [에이전트 작업 로그](docs/AGENT_WORK_LOG.md)
 - [전체 개발 계획](docs/DEVELOPMENT_PLAN.md)
 - [2D 구현 실행 계획](docs/2D_IMPLEMENTATION_PLAN.md)
 - [API 키 매니페스트](docs/API_KEY_MANIFEST.md)

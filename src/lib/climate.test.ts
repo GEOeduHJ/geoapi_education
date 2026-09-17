@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countInclusiveDays,
+  lawCodeToSgisAdmCds,
   summarizeClimate,
   summarizeClimatePeriods,
   type ClimateDailyObservation,
@@ -71,5 +72,33 @@ describe("climate summary", () => {
   it("counts calendar days including leap days", () => {
     expect(countInclusiveDays("2024-02-01", "2024-02-29")).toBe(29);
     expect(countInclusiveDays("2024-02-29", "2024-02-01")).toBe(0);
+  });
+});
+
+describe("lawCodeToSgisAdmCds", () => {
+  // 법정동코드(law_code)와 SGIS adm_cd는 서로 다른 시도 순번을 쓴다(예: 부산은 law_code 26, SGIS adm_cd 21).
+  // Production climate_stations.law_code와 /api/sgis-boundary 응답을 실제로 대조해 검증한 값.
+  it("maps real KMA station law_code prefixes to the SGIS adm_cd used by boundary features", () => {
+    expect(lawCodeToSgisAdmCds("1111017800")).toEqual(["11"]); // 서울
+    expect(lawCodeToSgisAdmCds("2611011600")).toEqual(["21"]); // 부산
+    expect(lawCodeToSgisAdmCds("2714010300")).toEqual(["22"]); // 대구
+    expect(lawCodeToSgisAdmCds("2812514400")).toEqual(["23"]); // 인천
+    expect(lawCodeToSgisAdmCds("3020012400")).toEqual(["25"]); // 대전
+    expect(lawCodeToSgisAdmCds("5211310600")).toEqual(["35"]); // 전주(전북)
+    expect(lawCodeToSgisAdmCds("5011010700")).toEqual(["39"]); // 제주
+    expect(lawCodeToSgisAdmCds("5111011800")).toEqual(["32"]); // 춘천(강원)
+    expect(lawCodeToSgisAdmCds("5115010700")).toEqual(["32"]); // 강릉(강원) — 춘천과 같은 경계로 집계되어야 함
+  });
+
+  it("maps 전남광주통합특별시(2026 개편) to both legacy SGIS boundaries until SGIS publishes merged geometry", () => {
+    // station_id 156(광주)의 실제 law_code. 시군구 경계는 안 바뀌었고 광역 코드만 바뀌었으므로
+    // SGIS가 통합 경계를 발행하기 전까지는 옛 광주(24)·옛 전남(36) 둘 다 이 값으로 칠해야 한다.
+    expect(lawCodeToSgisAdmCds("1230010900")).toEqual(["24", "36"]);
+  });
+
+  it("returns an empty array for missing or unrecognized prefixes instead of guessing", () => {
+    expect(lawCodeToSgisAdmCds(null)).toEqual([]);
+    expect(lawCodeToSgisAdmCds("")).toEqual([]);
+    expect(lawCodeToSgisAdmCds("9999999999")).toEqual([]);
   });
 });

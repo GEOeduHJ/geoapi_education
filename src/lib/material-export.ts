@@ -54,3 +54,27 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
   pdf.addImage(image, "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
   pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
+
+export async function exportTableAsCsv(
+  table: { columns: Array<{ key: string; label: string }>; records: unknown[] },
+  filename: string,
+): Promise<void> {
+  const headers = table.columns.map((col) => `"${col.label.replace(/"/g, '""')}"`).join(",");
+  const rows = table.records.map((record) => {
+    const row = record as Record<string, unknown>;
+    const metadata = (row.metadata as Record<string, unknown> | undefined) ?? {};
+    return table.columns
+      .map((col) => {
+        const value = row[col.key] ?? metadata[col.key] ?? "";
+        const strValue = typeof value === "object" ? JSON.stringify(value) : String(value);
+        return `"${strValue.replace(/"/g, '""')}"`;
+      })
+      .join(",");
+  });
+
+  const csv = [headers, ...rows].join("\n");
+  const bom = "﻿";
+  const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8" });
+
+  downloadBlob(blob, filename.endsWith(".csv") ? filename : `${filename}.csv`);
+}

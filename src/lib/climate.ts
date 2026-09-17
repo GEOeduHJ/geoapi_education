@@ -84,6 +84,41 @@ export interface ClimateSummary {
 
 export const DEFAULT_CLIMATE_STATION_IDS = ["101", "105", "108", "112", "133", "143", "146", "156", "159", "184"];
 
+// climate_stations.law_code(법정동코드, 10자리)의 앞 2자리 → SGIS adm_cd(들) 매핑.
+// 두 코드 체계가 서로 다른 순번을 쓴다(예: 법정동코드는 부산=26, SGIS adm_cd는 부산=21).
+// https://geoapieducation.vercel.app/api/sgis-boundary?year=2025&admCd=non&lowSearch=1 실측으로 검증함.
+// 대부분 1:1이지만 "12"(전남광주통합특별시, 2026-07-01 출범)는 1:N이다 — SGIS가 아직
+// 통합 후 경계 polygon을 발행하지 않아(/api/sgis-years의 tboudary_yr가 2025까지만 있음),
+// 옛 광주(24)·옛 전남(36) 두 도형 모두에 같은 값을 칠해야 실제와 맞다.
+export const LAW_CODE_PREFIX_TO_SGIS_ADM_CD: Record<string, string[]> = {
+  "11": ["11"], // 서울특별시
+  "12": ["24", "36"], // 전남광주통합특별시(2026 개편) → 옛 SGIS 경계인 광주(24)+전남(36) 둘 다
+  "26": ["21"], // 부산광역시
+  "27": ["22"], // 대구광역시
+  "28": ["23"], // 인천광역시
+  "29": ["24"], // 광주광역시(2026 개편 전 law_code)
+  "30": ["25"], // 대전광역시
+  "31": ["26"], // 울산광역시
+  "36": ["29"], // 세종특별자치시
+  "41": ["31"], // 경기도
+  "42": ["32"], // 강원도(2023 개편 전 law_code)
+  "51": ["32"], // 강원특별자치도(2023 개편 후 law_code)
+  "43": ["33"], // 충청북도
+  "44": ["34"], // 충청남도
+  "45": ["35"], // 전라북도(2024 개편 전 law_code)
+  "52": ["35"], // 전북특별자치도(2024 개편 후 law_code)
+  "46": ["36"], // 전라남도(2026 개편 전 law_code)
+  "47": ["37"], // 경상북도
+  "48": ["38"], // 경상남도
+  "50": ["39"], // 제주특별자치도
+};
+
+/** ClimateStation.law_code(법정동코드)를 SGIS adm_cd 목록으로 변환한다. 알 수 없는 접두사는 빈 배열. */
+export function lawCodeToSgisAdmCds(lawCode: string | null): string[] {
+  if (!lawCode) return [];
+  return LAW_CODE_PREFIX_TO_SGIS_ADM_CD[lawCode.slice(0, 2)] ?? [];
+}
+
 const STATION_COLUMNS = "station_id,name_ko,name_en,longitude,latitude,altitude_m,law_code,address";
 const OBSERVATION_COLUMNS = "station_id,observation_date,ta_avg,ta_max,ta_min,rn_day,ws_avg,hm_avg,ss_day,si_day,snapshot_id,quality_flags";
 const PERIOD_COLUMNS = "station_id,period_type,period_start,period_end,expected_observation_count,ta_avg,ta_avg_valid_count,ta_max,ta_max_valid_count,ta_min,ta_min_valid_count,rn_day,rn_day_valid_count,ws_avg,ws_avg_valid_count,hm_avg,hm_avg_valid_count,ss_day,ss_day_valid_count,si_day,si_day_valid_count";

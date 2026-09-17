@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { getDatasets, type DatasetDefinition, type DatasetScope } from "../lib/dataset-catalog";
+import { useDatasetCatalog, type DatasetDefinition, type DatasetScope } from "../lib/dataset-catalog";
 
 function capabilityLabel(capability: DatasetDefinition["capabilities"][number]): string {
   return { map: "지도", chart: "그래프", table: "표" }[capability];
@@ -16,7 +16,7 @@ export function DatasetSelector({
 }) {
   const rawId = useId();
   const selectId = `dataset-select-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const datasets = getDatasets(scope);
+  const datasets = useDatasetCatalog(scope);
   const selected = datasets.find((dataset) => dataset.key === value) ?? datasets[0];
   const ready = datasets.filter((dataset) => dataset.status === "ready");
   const planned = datasets.filter((dataset) => dataset.status === "planned");

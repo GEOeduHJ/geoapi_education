@@ -25,12 +25,14 @@ type MapStatus = "idle" | "loading" | "ready" | "error";
 export function VWorld2DMap({
   boundaries = null,
   boundaryValues = null,
+  boundaryValueLabel = "경계값",
   stationValues = null,
   visibleStationIds = null,
   showStations = true,
 }: {
   boundaries?: SgisBoundaryResponse | null;
   boundaryValues?: Record<string, BoundaryJoinValue> | null;
+  boundaryValueLabel?: string;
   stationValues?: Record<string, number | null> | null;
   visibleStationIds?: string[] | null;
   showStations?: boolean;
@@ -167,7 +169,7 @@ export function VWorld2DMap({
         </div>
         <div className="vworld-map-legend" aria-label="지도 범례">
           {showStations && <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>}
-          {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? " · KOSIS 값" : ""}</span>}
+          {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? ` · ${boundaryValueLabel}` : ""}</span>}
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
           {stationThematicSummary && <span><i className="vworld-map-legend__gradient vworld-map-legend__gradient--point" />지점값 {stationThematicSummary.min.toFixed(1)}–{stationThematicSummary.max.toFixed(1)}</span>}
           <span>배경: {basemapOption.label}</span>

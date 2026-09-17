@@ -8,11 +8,12 @@ import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/K
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
-import { getDataset, type DatasetScope } from "../lib/dataset-catalog";
-import type { ClimateMetric } from "../lib/climate";
+import { useDatasetCatalog, type DatasetScope } from "../lib/dataset-catalog";
+import { lawCodeToSgisAdmCds, type ClimateMetric } from "../lib/climate";
 import { fetchLatestPublicKosisDataset, type PublicKosisDataset } from "../lib/geo-observations";
-import { joinKosisObservationsToSgisBoundaries } from "../lib/geo-join";
+import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
+import { toNormalizedRecords, toMapLayerSpec } from "../lib/kma-adapter";
 
 const EMPTY_PUBLIC_KOSIS_DATASET: PublicKosisDataset = {
   snapshot: null,
@@ -110,7 +111,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
   const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
   const mapExportRef = useRef<HTMLDivElement | null>(null);
-  const dataset = getDataset(datasetKey);
+  const datasets = useDatasetCatalog(scope);
+  const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
   const isKma = datasetKey === "kma-asos-climate-10y";
   const isKosis = datasetKey === "kosis-sido-city-park-per-capita";
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
@@ -185,7 +187,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const visibleStationIds = useMemo(() => {
     if (!boundaryCode) return climateState.stations.map((station) => station.station_id);
     return climateState.stations
-      .filter((station) => station.law_code?.slice(0, 2) === boundaryCode)
+      .filter((station) => lawCodeToSgisAdmCds(station.law_code).includes(boundaryCode))
       .map((station) => station.station_id);
   }, [boundaryCode, climateState.stations]);
 
@@ -193,6 +195,44 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     () => Object.fromEntries(climateState.summaries.filter((summary) => visibleStationIds.includes(summary.stationId)).map((summary) => [summary.stationId, summary.value])),
     [climateState.summaries, visibleStationIds],
   );
+
+  const boundaryNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const feature of sgisBoundaries?.data.features ?? []) {
+      const code = feature.properties.adm_cd?.trim();
+      if (code && feature.properties.adm_nm) names[code] = feature.properties.adm_nm;
+    }
+    return names;
+  }, [sgisBoundaries]);
+
+  // KMA 데이터를 행정경계별로 집계해서 choropleth 데이터 생성
+  const kmaAggregatedBoundaryValues = useMemo<Record<string, BoundaryJoinValue> | null>(() => {
+    if (!isKma) return null;
+    const filteredSummaries = climateState.summaries.filter((summary) => visibleStationIds.includes(summary.stationId));
+    if (filteredSummaries.length === 0) return null;
+
+    // NormalizedRecord로 변환 (adm_cd 포함)
+    const records = toNormalizedRecords(filteredSummaries, metric, climateState.stations);
+    // 행정경계별 집계
+    const mapSpec = toMapLayerSpec(records, metric, boundaryNames);
+
+    // MapLayerSpec의 aggregated records를 BoundaryJoinValue 형식으로 변환
+    const result: Record<string, BoundaryJoinValue> = {};
+    for (const record of mapSpec.records) {
+      const admCd = record.location.adm_cd;
+      if (!admCd) continue;
+      result[admCd] = {
+        code: admCd,
+        value: record.value,
+        label: record.location.name ?? null,
+        unit: record.unit ?? null,
+        observationId: `kma-boundary-${admCd}`,
+        observedAt: record.timestamp ?? null,
+      };
+    }
+    return Object.keys(result).length > 0 ? result : null;
+  }, [climateState.summaries, visibleStationIds, climateState.stations, isKma, metric, boundaryNames]);
+
   const climateViewState = useMemo(
     () => ({ ...climateState, summaries: climateState.summaries.filter((summary) => visibleStationIds.includes(summary.stationId)) }),
     [climateState, visibleStationIds],
@@ -231,10 +271,15 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
           <div className="map-stage map-stage--live" ref={mapExportRef}>
             <VWorld2DMap
               boundaries={visibleBoundaries}
-              boundaryValues={isKosis && boundaryJoin.status === "ready" ? boundaryJoin.values : null}
-              stationValues={isKma ? stationValues : null}
-              visibleStationIds={isKma ? visibleStationIds : []}
-              showStations={isKma}
+              boundaryValues={
+                isKosis && boundaryJoin.status === "ready" ? boundaryJoin.values :
+                isKma && kmaAggregatedBoundaryValues ? kmaAggregatedBoundaryValues :
+                null
+              }
+              boundaryValueLabel={isKosis ? "KOSIS 값" : isKma ? "KMA 경계별 평균" : "경계값"}
+              stationValues={null}
+              visibleStationIds={[]}
+              showStations={false}
             />
           </div>
         ) : (

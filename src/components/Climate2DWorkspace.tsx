@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MaterialExportActions } from "./MaterialExportActions";
+import { ProvenancePanel } from "./ProvenancePanel";
 import {
   climateMetrics,
   countInclusiveDays,
@@ -15,6 +16,8 @@ import {
   type ClimateStation,
   type ClimateSummary,
 } from "../lib/climate";
+import { toNormalizedRecords, toProvenance, toTableModel } from "../lib/kma-adapter";
+import { exportTableAsCsv } from "../lib/material-export";
 
 export const DEFAULT_CLIMATE_FROM = "2016-01-01";
 export const DEFAULT_CLIMATE_TO = "2025-12-31";
@@ -174,8 +177,16 @@ export function Climate2DWorkspace({
   const minValue = numericValues.length ? Math.min(...numericValues) : 0;
   const maxValue = numericValues.length ? Math.max(...numericValues) : 0;
   const span = maxValue - minValue || 1;
-  const isPartialRange = Boolean(state.actualFrom && state.actualTo && (state.actualFrom !== from || state.actualTo !== to))
-    || state.summaries.some((summary) => summary.coverageRatio < 1);
+  const provenance = useMemo(
+    () => toProvenance(state.summaries, { datasetKey: "kma-asos-climate-10y", metric, from, to }, state.actualFrom, state.actualTo),
+    [state.summaries, state.actualFrom, state.actualTo, metric, from, to],
+  );
+
+  async function handleExportCsv() {
+    const records = toNormalizedRecords(state.summaries, metric, state.stations);
+    const table = toTableModel(records, metric);
+    await exportTableAsCsv(table, "geolab-2d-kma-climate");
+  }
 
   return (
     <section className="climate-2d-workspace" ref={exportRef} aria-labelledby="climate-2d-title">
@@ -191,7 +202,7 @@ export function Climate2DWorkspace({
         <label><span>보조 표현</span><select value={view} onChange={(event) => setView(event.target.value as "chart" | "table")}><option value="chart">그래프</option><option value="table">표</option></select></label>
       </div>
 
-      <MaterialExportActions targetRef={exportRef} fileName="geolab-2d-kma-climate" />
+      <MaterialExportActions targetRef={exportRef} fileName="geolab-2d-kma-climate" onExportCsv={state.status === "ready" ? handleExportCsv : undefined} />
 
       {state.status === "loading" && <div className="climate-message" role="status">저장된 관측자료를 불러오는 중입니다…</div>}
       {state.status === "error" && <div className="climate-message climate-message--error" role="alert"><strong>자료를 불러오지 못했습니다.</strong><span>{describeError(state.error)}</span><small>Supabase 공개 읽기 정책과 KMA snapshot 적재 상태를 확인하세요.</small></div>}
@@ -207,7 +218,7 @@ export function Climate2DWorkspace({
           ) : (
             <div className="climate-table-wrap"><table className="climate-table"><thead><tr><th>관측소</th><th>값</th><th>유효 관측일</th><th>유효범위</th><th>실제 자료 범위</th></tr></thead><tbody>{state.summaries.map((summary) => <tr key={summary.stationId}><th scope="row">{summary.stationName} <small>{summary.stationId}</small></th><td>{summary.value.toFixed(1)} {summary.unit}</td><td>{summary.observationCount.toLocaleString("ko-KR")} / {summary.expectedObservationCount.toLocaleString("ko-KR")}</td><td>{formatCoverage(summary.coverageRatio)}</td><td>{summary.firstDate} ~ {summary.lastDate}</td></tr>)}</tbody></table></div>
           )}
-          <div className="climate-footnote"><span>자료 유형: 기상청 ASOS 관측값</span><span>실제 적재 범위: {state.actualFrom} ~ {state.actualTo}</span>{isPartialRange && <strong>선택 범위와 유효 관측범위가 다르거나 결측이 있습니다.</strong>}</div>
+          <ProvenancePanel provenance={provenance} />
         </>
       )}
     </section>

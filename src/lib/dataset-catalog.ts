@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
+import { hasSupabaseClientConfig } from "./env";
+
 export type DatasetScope = "domestic" | "world";
 export type DatasetStatus = "ready" | "planned";
 export type DatasetCapability = "map" | "chart" | "table";
@@ -122,5 +125,126 @@ export function getDatasets(scope: DatasetScope): DatasetDefinition[] {
 
 export function getDataset(datasetKey: string): DatasetDefinition | null {
   return DATASET_CATALOG.find((dataset) => dataset.key === datasetKey) ?? null;
+}
+
+/**
+ * Published DB catalog rows are optional. When Supabase is not configured,
+ * the `dataset_catalog` table/migration is not yet applied, or the query
+ * otherwise fails, callers fall back to the static curated list above.
+ */
+type BrowserSupabaseClient = NonNullable<typeof import("./supabase").supabase>;
+let supabasePromise: Promise<BrowserSupabaseClient | null> | undefined;
+
+async function getSupabaseClient(): Promise<BrowserSupabaseClient | null> {
+  if (!hasSupabaseClientConfig) return null;
+  supabasePromise ??= import("./supabase").then(({ supabase: client }) => client);
+  return supabasePromise;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const CATALOG_COLUMNS =
+  "dataset_key,scope,title,provider,topic,space_label,coverage_label,period_min,period_max,period_label,capabilities,status,storage_mode,description,source_url";
+
+/**
+ * The DB `status` column (draft/published/retired) is a publishing workflow
+ * state, not the same thing as this app's ready/planned. A row can be
+ * published (safe to list) while `storage_mode` is still "planned" (no real
+ * data backing it yet), so both columns must agree before a dataset is
+ * treated as "ready".
+ */
+export function mapDatasetCatalogRow(value: unknown): DatasetDefinition | null {
+  if (!isRecord(value)) return null;
+  const key = value.dataset_key;
+  const scope = value.scope;
+  if (typeof key !== "string" || !key.trim()) return null;
+  if (scope !== "domestic" && scope !== "world") return null;
+
+  const storage: DatasetDefinition["storage"] =
+    value.storage_mode === "supabase" || value.storage_mode === "server-cache" ? value.storage_mode : "planned";
+  const capabilities = (Array.isArray(value.capabilities) ? value.capabilities : []).filter(
+    (item): item is DatasetCapability => item === "map" || item === "chart" || item === "table",
+  );
+
+  return {
+    key,
+    scope,
+    title: typeof value.title === "string" ? value.title : "",
+    provider: typeof value.provider === "string" ? value.provider : "",
+    topic: typeof value.topic === "string" ? value.topic : "",
+    space: typeof value.space_label === "string" ? value.space_label : "",
+    coverage: typeof value.coverage_label === "string" ? value.coverage_label : "",
+    period: {
+      min: typeof value.period_min === "string" ? value.period_min : "-",
+      max: typeof value.period_max === "string" ? value.period_max : "-",
+      label: typeof value.period_label === "string" ? value.period_label : "",
+    },
+    capabilities,
+    status: value.status === "published" && storage !== "planned" ? "ready" : "planned",
+    description: typeof value.description === "string" ? value.description : "",
+    sourceUrl: typeof value.source_url === "string" ? value.source_url : "",
+    storage,
+  };
+}
+
+export async function fetchPublishedDatasetCatalog(): Promise<{ data: DatasetDefinition[]; error: string | null }> {
+  const supabase = await getSupabaseClient();
+  if (!supabase) return { data: [], error: "SUPABASE_NOT_CONFIGURED" };
+
+  const result = await supabase
+    .from("dataset_catalog")
+    .select(CATALOG_COLUMNS)
+    .eq("status", "published")
+    .order("scope")
+    .order("title");
+  if (result.error) return { data: [], error: result.error.message };
+
+  const rows = Array.isArray(result.data) ? result.data : [];
+  return {
+    data: rows.map(mapDatasetCatalogRow).filter((row): row is DatasetDefinition => row !== null),
+    error: null,
+  };
+}
+
+/**
+ * Static entries stay visible until a published DB row overrides the same
+ * key. This lets datasets go live one at a time (KOSIS, World Bank, ...)
+ * without the rest of the curated list disappearing.
+ */
+export function mergeDatasetCatalog(publishedRows: DatasetDefinition[]): DatasetDefinition[] {
+  if (publishedRows.length === 0) return DATASET_CATALOG;
+  const byKey = new Map(publishedRows.map((row) => [row.key, row]));
+  const merged = DATASET_CATALOG.map((entry) => byKey.get(entry.key) ?? entry);
+  const knownKeys = new Set(DATASET_CATALOG.map((entry) => entry.key));
+  return [...merged, ...publishedRows.filter((row) => !knownKeys.has(row.key))];
+}
+
+let publishedCatalogPromise: Promise<{ data: DatasetDefinition[]; error: string | null }> | undefined;
+
+function loadPublishedDatasetCatalogOnce() {
+  publishedCatalogPromise ??= fetchPublishedDatasetCatalog();
+  return publishedCatalogPromise;
+}
+
+export function useDatasetCatalog(scope: DatasetScope): DatasetDefinition[] {
+  const [publishedRows, setPublishedRows] = useState<DatasetDefinition[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadPublishedDatasetCatalogOnce().then((result) => {
+      if (cancelled || result.error || result.data.length === 0) return;
+      setPublishedRows(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return useMemo(
+    () => mergeDatasetCatalog(publishedRows).filter((dataset) => dataset.scope === scope),
+    [publishedRows, scope],
+  );
 }
 
