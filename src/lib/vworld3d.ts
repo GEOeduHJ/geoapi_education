@@ -133,7 +133,9 @@ export function loadVWorld3D(): Promise<void> {
     }
 
     for (const url of [...new Set(scriptUrls)]) {
-      await loadExternalScript(url);
+      // 로더는 등록 도메인에 scheme이 없어 http URL을 만들지만,
+      // https 페이지에서는 혼합 콘텐츠로 차단되므로 https로 올린다 (서버가 둘 다 지원).
+      await loadExternalScript(url.replace(/^http:\/\//i, "https://"));
     }
     if (!getVw3D()) throw new Error("VWorld 3D 런타임이 초기화되지 않았습니다.");
   })().catch((error) => {
