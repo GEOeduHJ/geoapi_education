@@ -3,6 +3,7 @@ import {
   epsg5179ToWebMercator,
   extractVWorldScriptUrls,
   getChoroplethColor,
+  getStationThematicColor,
   transformNestedCoordinates,
   VWORLD_BASEMAP_OPTIONS,
 } from "./vworld2d";
@@ -41,6 +42,11 @@ describe("VWorld 2D loader helpers", () => {
     expect(getChoroplethColor(0, 0, 100)).toBe(getChoroplethColor(-20, 0, 100));
     expect(getChoroplethColor(100, 0, 100)).toBe(getChoroplethColor(120, 0, 100));
     expect(getChoroplethColor(50, 50, 50)).toContain("rgba");
+  });
+
+  it("changes station color across a finite value range without invalid colors", () => {
+    expect(getStationThematicColor(0, 0, 100)).not.toBe(getStationThematicColor(100, 0, 100));
+    expect(getStationThematicColor(Number.NaN, 0, 100)).toContain("rgba");
   });
 
   it("offers a low-clutter white basemap before reference and imagery options", () => {

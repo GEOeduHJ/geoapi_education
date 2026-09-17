@@ -314,6 +314,7 @@ function createBoundaryFeature(
 }
 
 const boundaryLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
+const stationLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
 const CHOROPLETH_COLORS = [
   "rgba(229, 241, 236, 0.76)",
   "rgba(167, 218, 198, 0.78)",
@@ -329,6 +330,16 @@ export function getChoroplethColor(value: number, min: number, max: number): str
   }
   const ratio = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0.5;
   return CHOROPLETH_COLORS[Math.round(ratio * (CHOROPLETH_COLORS.length - 1))];
+}
+
+/** Returns a darker point color for a finite station value. */
+export function getStationThematicColor(value: number, min: number, max: number): string {
+  if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max)) return "rgba(15, 139, 141, 0.95)";
+  const ratio = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0.5;
+  const red = Math.round(15 + ratio * 20);
+  const green = Math.round(139 - ratio * 70);
+  const blue = Math.round(141 - ratio * 70);
+  return `rgba(${red}, ${green}, ${blue}, 0.96)`;
 }
 
 function createBoundaryLayer(
@@ -382,6 +393,78 @@ function resolveVWorldBasemapType(runtime: VWorld2DRuntime, key: VWorldBasemapKe
   return runtime.vw.ol3.BasemapType[key] ?? runtime.vw.ol3.BasemapType.GRAPHIC;
 }
 
+function createStationLayer(
+  runtime: VWorld2DRuntime,
+  stations: ClimateStation[],
+  stationValues: Record<string, number | null> | null,
+): VWorldLayer | null {
+  if (!stations.length) return null;
+  const numericValues = stations
+    .map((station) => stationValues?.[station.station_id])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const min = numericValues.length ? Math.min(...numericValues) : null;
+  const max = numericValues.length ? Math.max(...numericValues) : null;
+  const styles = new Map<string, unknown>();
+  const getStyle = (station: ClimateStation) => {
+    const value = stationValues?.[station.station_id];
+    const fillColor = min !== null && max !== null && typeof value === "number"
+      ? getStationThematicColor(value, min, max)
+      : "rgba(15, 139, 141, 0.95)";
+    const cacheKey = `${fillColor}:${typeof value === "number" ? Math.round(value) : "base"}`;
+    const cached = styles.get(cacheKey);
+    if (cached) return cached;
+    const radius = min !== null && max !== null && typeof value === "number"
+      ? 6 + Math.round(((value - min) / (max - min || 1)) * 4)
+      : 6;
+    const style = new runtime.ol.style.Style({
+      image: new runtime.ol.style.Circle({
+        radius,
+        fill: new runtime.ol.style.Fill({ color: fillColor }),
+        stroke: new runtime.ol.style.Stroke({ color: "#ffffff", width: 2 }),
+      }),
+    });
+    styles.set(cacheKey, style);
+    return style;
+  };
+  const features = stations.map((station) => {
+    const feature = new runtime.ol.Feature({
+      geometry: new runtime.ol.geom.Point(
+        runtime.ol.proj.fromLonLat([station.longitude, station.latitude], "EPSG:900913"),
+      ),
+      stationId: station.station_id,
+    });
+    feature.setStyle(getStyle(station));
+    return feature;
+  });
+  const source = new runtime.ol.source.Vector({ features });
+  const stationLayer = new runtime.ol.layer.Vector({ source });
+  stationLayer.set("name", min !== null ? "KMA ASOS 관측소 · 기후 지표" : "KMA ASOS 관측소");
+  if (min !== null && max !== null) {
+    stationLayer.set("valueMin", min);
+    stationLayer.set("valueMax", max);
+    stationLayer.set("valueCount", numericValues.length);
+  }
+  return stationLayer;
+}
+
+/** Replaces only the KMA station layer when the selected climate query changes. */
+export function updateVWorld2DStationLayer(
+  runtime: VWorld2DRuntime,
+  map: VWorldMap,
+  stations: ClimateStation[],
+  stationValues: Record<string, number | null> | null = null,
+): void {
+  const previousLayer = stationLayerByMap.get(map);
+  if (previousLayer) {
+    map.removeLayer(previousLayer);
+    stationLayerByMap.delete(map);
+  }
+  const stationLayer = createStationLayer(runtime, stations, stationValues);
+  if (!stationLayer) return;
+  map.addLayer(stationLayer);
+  stationLayerByMap.set(map, stationLayer);
+}
+
 /** Changes only the VWorld background while preserving user-added vector layers. */
 export function setVWorld2DBasemap(
   runtime: VWorld2DRuntime,
@@ -423,6 +506,7 @@ export function createVWorld2DMap(
   stations: ClimateStation[],
   onSelectStation: (stationId: string | null) => void,
   basemapType: VWorldBasemapKey = "GRAPHIC_WHITE",
+  stationValues: Record<string, number | null> | null = null,
 ): VWorldMap {
   const center = runtime.ol.proj.fromLonLat([127.5, 36.5], "EPSG:900913");
   const position = { center, zoom: 7, rotation: 0 };
@@ -435,28 +519,12 @@ export function createVWorld2DMap(
     initPosition: position,
   });
 
-  const fill = new runtime.ol.style.Fill({ color: "rgba(15, 139, 141, 0.95)" });
-  const stroke = new runtime.ol.style.Stroke({ color: "#ffffff", width: 2 });
-  const markerStyle = new runtime.ol.style.Style({
-    image: new runtime.ol.style.Circle({ radius: 6, fill, stroke }),
-  });
-  const features = stations.map((station) => {
-    const feature = new runtime.ol.Feature({
-      geometry: new runtime.ol.geom.Point(
-        runtime.ol.proj.fromLonLat([station.longitude, station.latitude], "EPSG:900913"),
-      ),
-      stationId: station.station_id,
-    });
-    feature.setStyle(markerStyle);
-    return feature;
-  });
-  const source = new runtime.ol.source.Vector({ features });
-  const stationLayer = new runtime.ol.layer.Vector({ source });
-  stationLayer.set("name", "KMA ASOS 관측소");
-  map.addLayer(stationLayer);
+  updateVWorld2DStationLayer(runtime, map, stations, stationValues);
 
-  if (features.length) {
-    map.getView().fit(source.getExtent(), { padding: [60, 60, 60, 60], maxZoom: 8 });
+  if (stations.length) {
+    const stationLayer = stationLayerByMap.get(map);
+    const source = stationLayer ? (stationLayer as unknown as { getSource?: () => VWorldVectorSource }).getSource?.() : null;
+    if (source) map.getView().fit(source.getExtent(), { padding: [60, 60, 60, 60], maxZoom: 8 });
   }
   map.on("singleclick", (event) => {
     const feature = map.forEachFeatureAtPixel(event.pixel, (candidate) => candidate);
@@ -473,6 +541,11 @@ export function disposeVWorld2DMap(runtime: VWorld2DRuntime, map: VWorldMap): vo
   if (boundaryLayer) {
     map.removeLayer(boundaryLayer);
     boundaryLayerByMap.delete(map);
+  }
+  const stationLayer = stationLayerByMap.get(map);
+  if (stationLayer) {
+    map.removeLayer(stationLayer);
+    stationLayerByMap.delete(map);
   }
   map.setTarget(null);
   map.dispose?.();

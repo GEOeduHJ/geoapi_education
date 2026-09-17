@@ -12,6 +12,7 @@ import {
   loadVWorld2D,
   setVWorld2DBasemap,
   updateVWorld2DBoundaryLayer,
+  updateVWorld2DStationLayer,
   VWORLD_BASEMAP_OPTIONS,
   type VWorldBasemapKey,
   type VWorld2DRuntime,
@@ -24,9 +25,15 @@ type MapStatus = "idle" | "loading" | "ready" | "error";
 export function VWorld2DMap({
   boundaries = null,
   boundaryValues = null,
+  stationValues = null,
+  visibleStationIds = null,
+  showStations = true,
 }: {
   boundaries?: SgisBoundaryResponse | null;
   boundaryValues?: Record<string, BoundaryJoinValue> | null;
+  stationValues?: Record<string, number | null> | null;
+  visibleStationIds?: string[] | null;
+  showStations?: boolean;
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<{ runtime: VWorld2DRuntime; map: ReturnType<typeof createVWorld2DMap> } | null>(null);
@@ -34,6 +41,7 @@ export function VWorld2DMap({
   const mapId = `vworld-map-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const boundariesRef = useRef(boundaries);
   const boundaryValuesRef = useRef(boundaryValues);
+  const stationValuesRef = useRef(stationValues);
   const [stations, setStations] = useState<ClimateStation[]>([]);
   const [stationStatus, setStationStatus] = useState<"loading" | "ready">("loading");
   const [stationError, setStationError] = useState<string | null>(null);
@@ -43,7 +51,18 @@ export function VWorld2DMap({
   const [basemapType, setBasemapType] = useState<VWorldBasemapKey>("GRAPHIC_WHITE");
   const basemapTypeRef = useRef<VWorldBasemapKey>("GRAPHIC_WHITE");
 
+  const displayStations = useMemo(
+    () => visibleStationIds ? stations.filter((station) => visibleStationIds.includes(station.station_id)) : stations,
+    [stations, visibleStationIds],
+  );
+
   useEffect(() => {
+    if (!showStations) {
+      setStations([]);
+      setStationError(null);
+      setStationStatus("ready");
+      return () => undefined;
+    }
     let cancelled = false;
     fetchClimateStations(DEFAULT_CLIMATE_STATION_IDS).then((result) => {
       if (cancelled) return;
@@ -56,14 +75,18 @@ export function VWorld2DMap({
       setStationError("KMA 관측소 정보를 읽지 못했습니다.");
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [showStations]);
 
   useEffect(() => {
     boundariesRef.current = boundaries;
     boundaryValuesRef.current = boundaryValues;
+    stationValuesRef.current = stationValues;
     const currentMap = mapRef.current;
-    if (currentMap) updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries, boundaryValues);
-  }, [boundaries, boundaryValues]);
+    if (currentMap) {
+      updateVWorld2DBoundaryLayer(currentMap.runtime, currentMap.map, boundaries, boundaryValues);
+      updateVWorld2DStationLayer(currentMap.runtime, currentMap.map, displayStations, stationValues);
+    }
+  }, [boundaries, boundaryValues, displayStations, stationValues]);
 
   useEffect(() => {
     if (stationStatus !== "ready" || !mapElementRef.current) return;
@@ -73,7 +96,7 @@ export function VWorld2DMap({
 
     loadVWorld2D().then((runtime) => {
       if (cancelled || !mapElementRef.current) return;
-      const map = createVWorld2DMap(runtime, mapId, stations, setSelectedStationId, basemapTypeRef.current);
+      const map = createVWorld2DMap(runtime, mapId, displayStations, setSelectedStationId, basemapTypeRef.current, stationValuesRef.current);
       mapRef.current = { runtime, map };
       updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
       setMapStatus("ready");
@@ -90,7 +113,7 @@ export function VWorld2DMap({
         mapRef.current = null;
       }
     };
-  }, [mapId, stationStatus, stations]);
+  }, [displayStations, mapId, stationStatus]);
 
   useEffect(() => {
     basemapTypeRef.current = basemapType;
@@ -111,6 +134,11 @@ export function VWorld2DMap({
       unit: entries.find((entry) => entry.unit)?.unit ?? null,
     };
   }, [boundaryValues]);
+  const stationThematicSummary = useMemo(() => {
+    const values = Object.values(stationValues ?? {}).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    if (!values.length) return null;
+    return { count: values.length, min: Math.min(...values), max: Math.max(...values) };
+  }, [stationValues]);
   const selectedStation = stations.find((station) => station.station_id === selectedStationId);
   const basemapOption = getVWorldBasemapOption(basemapType);
   const domain = resolveVWorldDomain();
@@ -128,18 +156,20 @@ export function VWorld2DMap({
           ref={mapElementRef}
           className="vworld-map"
           role="application"
-          aria-label={`VWorld 2D 지도와 KMA ASOS 관측소 · ${basemapOption.label}`}
+          aria-label={`VWorld 2D 지도${showStations ? "와 KMA ASOS 관측소" : "와 행정경계"} · ${basemapOption.label}`}
         />
         <div className="vworld-map-caption">
-          <span>VWORLD 2D · KMA ASOS</span>
-          <span>{stations.length ? `${stations.length}개 관측소` : "관측소 불러오는 중"}</span>
+          <span>VWORLD 2D · {showStations ? "KMA ASOS" : "SGIS BOUNDARY"}</span>
+          {showStations && <span>{displayStations.length ? `${displayStations.length}개 관측소` : "관측소 불러오는 중"}</span>}
           {boundaries && <span>{boundaries.data.features.length}개 경계</span>}
-          {thematicSummary && <span>{thematicSummary.count}개 값</span>}
+          {thematicSummary && <span>{thematicSummary.count}개 경계값</span>}
+          {stationThematicSummary && <span>{stationThematicSummary.count}개 지점값</span>}
         </div>
         <div className="vworld-map-legend" aria-label="지도 범례">
-          <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>
+          {showStations && <span><i className="vworld-map-legend__dot" />KMA ASOS 관측소</span>}
           {boundaries && <span><i className={`vworld-map-legend__area${thematicSummary ? " vworld-map-legend__area--thematic" : ""}`} />SGIS 시도 경계{thematicSummary ? " · KOSIS 값" : ""}</span>}
           {thematicSummary && <span><i className="vworld-map-legend__gradient" />{thematicSummary.min.toLocaleString("ko-KR")}–{thematicSummary.max.toLocaleString("ko-KR")} {thematicSummary.unit ?? "값"}</span>}
+          {stationThematicSummary && <span><i className="vworld-map-legend__gradient vworld-map-legend__gradient--point" />지점값 {stationThematicSummary.min.toFixed(1)}–{stationThematicSummary.max.toFixed(1)}</span>}
           <span>배경: {basemapOption.label}</span>
         </div>
         <div className="vworld-map-basemap-control" data-export-ignore="true">
@@ -160,7 +190,7 @@ export function VWorld2DMap({
       <div className="vworld-map-detail" aria-live="polite">
         <div>
           <p className="eyebrow">OBSERVATION STATION</p>
-          <h3>{selectedStation ? selectedStation.name_ko : "관측소를 선택하세요"}</h3>
+          <h3>{selectedStation ? selectedStation.name_ko : showStations ? "관측소를 선택하세요" : "행정경계를 확인하세요"}</h3>
         </div>
         {selectedStation ? (
           <dl className="vworld-map-detail__list">
@@ -169,7 +199,7 @@ export function VWorld2DMap({
             <div><dt>고도</dt><dd>{selectedStation.altitude_m ?? "-"} m</dd></div>
           </dl>
         ) : (
-          <p>지도 위 점을 클릭하면 관측소 위치와 좌표를 확인할 수 있습니다. 차트자료와 같은 KMA 관측소 집합을 사용합니다.</p>
+          <p>{showStations ? "지도 위 점을 클릭하면 관측소 위치와 좌표를 확인할 수 있습니다. 차트자료와 같은 KMA 관측소 집합을 사용합니다." : "선택한 데이터셋의 행정경계와 범례를 확인합니다. 값이 공개된 경우 경계 면에 주제값을 결합합니다."}</p>
         )}
         {stationError && <small className="vworld-map-detail__notice">{fallbackMessage}</small>}
       </div>

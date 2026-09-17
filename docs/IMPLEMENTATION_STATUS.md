@@ -2,6 +2,15 @@
 
 최종 갱신: 2026-09-17
 
+## 2026-09-17 2D 구현 착수 기록
+
+- `docs/2D_IMPLEMENTATION_PLAN.md`를 2D 개발의 실행 기준 문서로 추가함. 국내/세계 분리, 공통 조회 계약, 실제 시각화 조건, 3D gate, 검증·배포 체크리스트를 포함함.
+- learner UI의 데이터 선택을 provider 검색 중심에서 curated dataset 드롭다운 중심으로 전환함. 현재 검증된 ready dataset은 KMA ASOS 10년 snapshot 하나이며, KOSIS·세계 자료는 준비 상태를 드롭다운에 표시함.
+- `/create/2d/domestic`와 `/create/2d/world` 경로를 분리하고 `/create/2d`는 국내 경로로 이동시킴.
+- KMA 2D 첫 수직 슬라이스를 구현함: Supabase 기후자료 조회 조건을 기준으로 지점값 색상/크기, 비교 그래프, 표, PNG/PDF export를 연결함.
+- SGIS 2025 시도 경계 필터를 추가함. 선택 지역은 지도·경계 조인·KMA 지점·그래프/표 범위에 같은 상태로 전달함.
+- `supabase/migrations/0006_dataset_catalog.sql`을 추가함. 공개 카탈로그는 `status='published'`만 anon/authenticated에게 읽히고, 브라우저 쓰기는 허용하지 않음. 현재 정적 catalog는 migration 적용 전에도 화면을 검증할 수 있는 fallback임.
+
 ## 이번 단계에서 완료한 것
 
 - React 19 + Vite + TypeScript 실행 골격

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Climate2DWorkspace, DEFAULT_CLIMATE_FROM, DEFAULT_CLIMATE_TO, useClimateDataset } from "../components/Climate2DWorkspace";
 import { ClimateComparison } from "../components/ClimateComparison";
+import { DatasetSelector } from "../components/DatasetSelector";
 import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
 import { KosisBoundaryJoinStatusPanel } from "../components/KosisBoundaryJoinStatusPanel";
-import { KosisTableSearch } from "../components/KosisTableSearch";
 import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../components/SgisBoundaryStatusPanel";
 import { VWorld2DMap } from "../components/VWorld2DMap";
+import { getDataset, type DatasetScope } from "../lib/dataset-catalog";
+import type { ClimateMetric } from "../lib/climate";
 import { fetchLatestPublicKosisDataset, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries } from "../lib/geo-join";
 import { fetchSgisBoundaries, type SgisBoundaryResponse } from "../lib/sgis";
@@ -93,18 +96,32 @@ function WorkspaceNotice({ dimension, description }: { dimension: "2D" | "3D"; d
   );
 }
 
-export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
+export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2D" | "3D"; scope?: DatasetScope }) {
   const isThreeD = dimension === "3D";
-  const [source, setSource] = useState("kma-hub");
+  const isDomestic = scope === "domestic";
+  const [datasetKey, setDatasetKey] = useState(isDomestic ? "kma-asos-climate-10y" : "world-bank-population-density");
+  const [metric, setMetric] = useState<ClimateMetric>("ta_avg");
+  const [from, setFrom] = useState(DEFAULT_CLIMATE_FROM);
+  const [to, setTo] = useState(DEFAULT_CLIMATE_TO);
+  const [boundaryCode, setBoundaryCode] = useState("");
   const [sgisBoundaryStatus, setSgisBoundaryStatus] = useState<SgisBoundaryPanelStatus>("idle");
   const [sgisBoundaries, setSgisBoundaries] = useState<SgisBoundaryResponse | null>(null);
   const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
   const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
   const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
   const mapExportRef = useRef<HTMLDivElement | null>(null);
+  const dataset = getDataset(datasetKey);
+  const isKma = datasetKey === "kma-asos-climate-10y";
+  const isKosis = datasetKey === "kosis-sido-city-park-per-capita";
+  const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
 
   useEffect(() => {
-    if (isThreeD || source !== "kosis") {
+    setDatasetKey(isDomestic ? "kma-asos-climate-10y" : "world-bank-population-density");
+    setBoundaryCode("");
+  }, [isDomestic]);
+
+  useEffect(() => {
+    if (isThreeD || !isDomestic) {
       setSgisBoundaryStatus("idle");
       setSgisBoundaries(null);
       setSgisBoundaryError(null);
@@ -117,104 +134,153 @@ export function MapCreatePage({ dimension }: { dimension: "2D" | "3D" }) {
     setSgisBoundaryStatus("loading");
     setSgisBoundaries(null);
     setSgisBoundaryError(null);
-    setKosisStatus("loading");
-    setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+    if (isKosis) {
+      setKosisStatus("loading");
+      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+    } else {
+      setKosisStatus("idle");
+      setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
+    }
 
-    Promise.all([
-      fetchLatestPublicKosisDataset(),
-      fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 }),
-    ]).then(([kosisResult, sgisResult]) => {
+    const load = async () => {
+      const boundaryResult = await fetchSgisBoundaries({ year: 2025, admCd: "non", lowSearch: 1 });
+      if (cancelled) return;
+      setSgisBoundaries(boundaryResult.data);
+      setSgisBoundaryError(boundaryResult.error);
+      setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
+      if (!isKosis) return;
+      const kosisResult = await fetchLatestPublicKosisDataset();
       if (cancelled) return;
       setKosisDataset(kosisResult);
       setKosisStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
-      setSgisBoundaries(sgisResult.data);
-      setSgisBoundaryError(sgisResult.error);
-      setSgisBoundaryStatus(sgisResult.error ? "error" : "ready");
-    }).catch(() => {
+    };
+    load().catch(() => {
       if (cancelled) return;
-      setKosisStatus("error");
-      setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
       setSgisBoundaryStatus("error");
       setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
+      if (isKosis) {
+        setKosisStatus("error");
+        setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
+      }
     });
-
     return () => { cancelled = true; };
-  }, [isThreeD, source]);
+  }, [isDomestic, isKosis, isThreeD]);
+
+  const visibleBoundaries = useMemo<SgisBoundaryResponse | null>(() => {
+    if (!sgisBoundaries || !boundaryCode) return sgisBoundaries;
+    return {
+      ...sgisBoundaries,
+      data: {
+        ...sgisBoundaries.data,
+        features: sgisBoundaries.data.features.filter((feature) => feature.properties.adm_cd === boundaryCode),
+      },
+    };
+  }, [boundaryCode, sgisBoundaries]);
 
   const boundaryJoin = useMemo(
-    () => joinKosisObservationsToSgisBoundaries(sgisBoundaries, kosisDataset.observations),
-    [kosisDataset.observations, sgisBoundaries],
+    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, kosisDataset.observations),
+    [kosisDataset.observations, visibleBoundaries],
   );
+
+  const visibleStationIds = useMemo(() => {
+    if (!boundaryCode) return climateState.stations.map((station) => station.station_id);
+    return climateState.stations
+      .filter((station) => station.law_code?.slice(0, 2) === boundaryCode)
+      .map((station) => station.station_id);
+  }, [boundaryCode, climateState.stations]);
+
+  const stationValues = useMemo(
+    () => Object.fromEntries(climateState.summaries.filter((summary) => visibleStationIds.includes(summary.stationId)).map((summary) => [summary.stationId, summary.value])),
+    [climateState.summaries, visibleStationIds],
+  );
+  const climateViewState = useMemo(
+    () => ({ ...climateState, summaries: climateState.summaries.filter((summary) => visibleStationIds.includes(summary.stationId)) }),
+    [climateState, visibleStationIds],
+  );
+
+  const boundaryOptions = sgisBoundaries?.data.features ?? [];
+  const selectedBoundaryName = boundaryOptions.find((feature) => feature.properties.adm_cd === boundaryCode)?.properties.adm_nm;
 
   return (
     <div className="page-stack">
       <section className="page-intro page-intro--with-back">
         <div>
           <Link className="back-link" to="/create">← 자료 유형 선택</Link>
-          <p className="eyebrow">MATERIAL STUDIO / {dimension}</p>
-          <h1>{dimension} 지도자료 제작</h1>
-          <p>{isThreeD ? "지형·고도·도시 경관을 입체적으로 배치하고 관찰 가능한 질문을 설계합니다." : "분포·밀도·접근성·변화를 레이어와 범례로 표현하고 설명 가능한 지도를 설계합니다."}</p>
+          <p className="eyebrow">MATERIAL STUDIO / {dimension} / {scope.toUpperCase()}</p>
+          <h1>{dimension} {scope === "domestic" ? "국내" : "세계"} 지도자료 제작</h1>
+          <p>{isThreeD ? "지형·고도·도시 경관을 입체적으로 배치하고 관찰 가능한 질문을 설계합니다." : "자료셋을 고르고 동일한 조건을 지도·그래프·표에 적용해 설명 가능한 2D 자료를 설계합니다."}</p>
         </div>
         <span className={`dimension-mark dimension-mark--${dimension.toLowerCase()}`}>{dimension}</span>
       </section>
 
       <WorkspaceNotice
         dimension={dimension}
-        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : "VWorld 2D 배경에 KMA ASOS 관측소와 SGIS 기준경계를 올려 공간 기준을 확인합니다. KOSIS 지역코드 대응표를 검증한 뒤 값 기반 주제 레이어를 연결합니다."}
+        description={isThreeD ? "VWorld WebGL 3D 초기화 계약과 고도 데이터 어댑터를 연결할 자리입니다." : `${scope === "domestic" ? "국내 행정경계·관측지점" : "세계 국가·도시"} 자료를 하나의 필터로 지도·그래프·표에 연결합니다. 3D는 2D 데이터 계약이 완성된 뒤 확장합니다.`}
       />
+
+      {!isThreeD && <nav className="workspace-mode-nav" aria-label="2D 지도 범위"><Link className={scope === "domestic" ? "is-active" : ""} to="/create/2d/domestic">국내 2D</Link><Link className={scope === "world" ? "is-active" : ""} to="/create/2d/world">세계 2D</Link></nav>}
 
       <section className="workspace-grid">
         {isThreeD ? (
           <div className="map-stage map-stage--empty">
             <div className="map-stage__grid" />
-            <div className="map-stage__center">
-              <span className="map-stage__pin">＋</span>
-              <strong>3D 렌더러 연결 대기</strong>
-              <p>다음 단계에서 VWorld WebGL 3D와 고도 데이터 어댑터를 연결합니다.</p>
-            </div>
+            <div className="map-stage__center"><span className="map-stage__pin">＋</span><strong>3D 렌더러 연결 대기</strong><p>2D 국내·세계 지도에서 실제 자료의 지도·그래프·표 계약을 먼저 완성합니다.</p></div>
             <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
           </div>
-        ) : (
+        ) : isDomestic ? (
           <div className="map-stage map-stage--live" ref={mapExportRef}>
             <VWorld2DMap
-              boundaries={source === "kosis" ? sgisBoundaries : null}
-              boundaryValues={source === "kosis" && boundaryJoin.status === "ready" ? boundaryJoin.values : null}
+              boundaries={visibleBoundaries}
+              boundaryValues={isKosis && boundaryJoin.status === "ready" ? boundaryJoin.values : null}
+              stationValues={isKma ? stationValues : null}
+              visibleStationIds={isKma ? visibleStationIds : []}
+              showStations={isKma}
             />
           </div>
+        ) : (
+          <div className="map-stage map-stage--empty map-stage--planned"><div className="map-stage__grid" /><div className="map-stage__center"><span className="map-stage__pin">◎</span><strong>세계 2D 데이터셋 준비 중</strong><p>World Bank 국가 geometry와 지표 snapshot을 연결하면 이 공간에서 단계구분도를 제공합니다.</p></div></div>
         )}
         <aside className="workspace-sidebar">
           <div className="sidebar-section">
-            <p className="eyebrow">01 · DATA SOURCE</p>
-            <h3>자료 소스 선택</h3>
-            <label className="field-label" htmlFor="source-select">기본 데이터</label>
-            <select id="source-select" value={source} onChange={(event) => setSource(event.target.value)}>
-              <option value="kosis">KOSIS 통계</option>
-              <option value="sgis-data">SGIS 공간통계</option>
-              <option value="kma-hub">기상청 ASOS</option>
-              <option value="world-bank">World Bank</option>
-              <option value="opentopodata">OpenTopoData 고도</option>
-            </select>
-            {source === "kosis" && <KosisTableSearch />}
-            {!isThreeD && source === "kosis" && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
-            {!isThreeD && source === "kosis" && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
-            {!isThreeD && source === "kosis" && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
+            <p className="eyebrow">01 · DATASET</p>
+            <h3>{scope === "domestic" ? "국내 자료 선택" : "세계 자료 선택"}</h3>
+            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); }} />
+            {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
+            {!isThreeD && isKosis && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
+            {!isThreeD && isKosis && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
+            {!isThreeD && isKosis && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
           </div>
+          {!isThreeD && isDomestic && (
+            <div className="sidebar-section">
+              <p className="eyebrow">02 · GEOGRAPHY FILTER</p>
+              <h3>행정경계 범위</h3>
+              <label className="field-label" htmlFor="boundary-filter">지도에 표시할 경계</label>
+              <select id="boundary-filter" value={boundaryCode} onChange={(event) => setBoundaryCode(event.target.value)} disabled={sgisBoundaryStatus !== "ready"}>
+                <option value="">전체 시도 · {boundaryOptions.length || "-"}개</option>
+                {boundaryOptions.map((feature) => <option key={feature.properties.adm_cd ?? feature.properties.adm_nm} value={feature.properties.adm_cd ?? ""}>{feature.properties.adm_nm ?? feature.properties.adm_cd ?? "이름 없음"}</option>)}
+              </select>
+              <small className="field-help">{boundaryCode ? `${selectedBoundaryName ?? boundaryCode}만 지도·범례·자료표 범위에 반영합니다.` : "전체 경계를 표시합니다. 특정 시도를 고르면 KMA 지점과 KOSIS 값도 같은 범위로 제한합니다."}</small>
+              {sgisBoundaryStatus === "loading" && <small className="field-help">SGIS 경계 목록을 불러오는 중입니다…</small>}
+              {sgisBoundaryError && <small className="field-help field-help--error">경계 목록을 읽지 못했습니다.</small>}
+            </div>
+          )}
           <div className="sidebar-section">
-            <p className="eyebrow">02 · REPRESENTATION</p>
+            <p className="eyebrow">03 · REPRESENTATION</p>
             <h3>표현 규칙</h3>
             <div className="control-row"><span>범례 자동 제안</span><button className="toggle is-on" type="button" aria-label="범례 자동 제안 켜짐"><i /></button></div>
             <div className="control-row"><span>학습자 조작 허용</span><button className="toggle is-on" type="button" aria-label="학습자 조작 허용 켜짐"><i /></button></div>
             <div className="control-row"><span>출처 패널 표시</span><button className="toggle is-on" type="button" aria-label="출처 패널 표시 켜짐"><i /></button></div>
           </div>
           <div className="sidebar-section sidebar-section--last">
-            <p className="eyebrow">03 · INQUIRY LINK</p>
+            <p className="eyebrow">04 · INQUIRY LINK</p>
             <h3>활동 연결</h3>
             <p className="muted-copy">자료 저장 후 관찰·비교·설명·일반화 질문을 연결할 수 있습니다.</p>
             <button className="button button-primary button-full" type="button">자료 저장 준비</button>
           </div>
         </aside>
       </section>
-      {!isThreeD && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
+      {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} onMetricChange={setMetric} onFromChange={setFrom} onToChange={setTo} state={climateViewState} />}
+      {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );
 }
