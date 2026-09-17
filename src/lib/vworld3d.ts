@@ -234,16 +234,21 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
     throw new Error("지도를 생성하지 못했습니다(new vw.Map).");
   }
   try {
+    const initPosition = new namespace.CameraPosition(
+      new namespace.CoordZ(127.9, 36.3, 1_100_000),
+      new namespace.Direction(0, -45, 0),
+    );
     map.setOption?.({
       mapId: containerId,
-      initPosition: new namespace.CameraPosition(
-        new namespace.CoordZ(127.9, 36.3, 1_100_000),
-        new namespace.Direction(0, -45, 0),
-      ),
+      initPosition,
       logo: true,
       navigation: true,
     });
     map.setMapId?.(containerId);
+    // 문서 순서대로 초기 위치·표시를 setter로도 확정한다 (start() 선행 조건).
+    map.setInitPosition?.(initPosition);
+    map.setLogoVisible?.(true);
+    map.setNavigationZoomVisible?.(true);
   } catch {
     throw new Error("초기 위치 설정에 실패했습니다.");
   }
