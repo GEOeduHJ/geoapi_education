@@ -82,6 +82,9 @@ function getVw3D(): VwNamespace3D | null {
   return vw;
 }
 
+/** 3D 엔진이 요구하는 jQuery (VWorld 2D와 동일한 배포본). */
+const VWORLD_JQUERY_URL = "https://map.vworld.kr/jquery/ol3/jquery-1.11.3.min.js";
+
 function loadExternalScript(url: string): Promise<void> {
   const existing = [...document.scripts].some((script) => script.dataset.vworld3dSrc === url);
   if (existing) return Promise.resolve();
@@ -132,6 +135,8 @@ export function loadVWorld3D(): Promise<void> {
       document.writeln = originalWriteln;
     }
 
+    // 엔진은 호스트 페이지의 jQuery($)를 전제로 하므로 엔진보다 먼저 올린다.
+    await loadExternalScript(VWORLD_JQUERY_URL);
     for (const url of [...new Set(scriptUrls)]) {
       // 로더는 등록 도메인에 scheme이 없어 http URL을 만들지만,
       // https 페이지에서는 혼합 콘텐츠로 차단되므로 https로 올린다 (서버가 둘 다 지원).
