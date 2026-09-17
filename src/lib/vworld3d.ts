@@ -6,7 +6,7 @@
 
 import { buildVWorld3DLoaderUrl } from "./api/requests";
 import { publicEnv, resolveVWorldDomain } from "./env";
-import { epsg5179ToWebMercator, webMercatorToLonLat } from "./vworld2d";
+import { epsg5179ToWebMercator, extractVWorldScriptUrls, webMercatorToLonLat } from "./vworld2d";
 
 export interface PrismInput {
   code: string;
@@ -70,42 +70,72 @@ declare global {
   }
 }
 
-function vw3d(): VwNamespace3D | null {
+function getVw3D(): VwNamespace3D | null {
   const vw = (window as unknown as { vw?: VwNamespace3D }).vw;
-  // 2D 로더와 같은 vw 네임스페이스를 공유하므로 3D 생성자가 있는지 확인한다.
+  // 2D 로더와 같은 vw 네임스페이스를 공유하므로 3D 전용 생성자로 구분한다.
+  // 인스턴스를 만들지 않고 존재 여부만 확인한다 (부작용 방지).
   if (!vw || typeof vw.Map !== "function") return null;
-  try {
-    // 2D 지도가 쓰는 vw.Map(container, options)과 구분하기 위해 무인자 생성을 시도한다.
-    // 실패하면 2D 전용 런타임으로 보고 null을 반환한다.
-    const probe = new vw.Map();
-    if (typeof probe.setOption !== "function" || typeof probe.start !== "function") return null;
-    if (typeof probe.destroy === "function") probe.destroy();
-    return vw;
-  } catch {
-    return null;
-  }
+  const candidate = vw as unknown as Record<string, unknown>;
+  if (typeof candidate["CameraPosition"] !== "function") return null;
+  if (typeof candidate["CoordZ"] !== "function") return null;
+  if (typeof candidate["Direction"] !== "function") return null;
+  return vw;
 }
 
-let loaderPromise: Promise<void> | undefined;
+function loadExternalScript(url: string): Promise<void> {
+  const existing = [...document.scripts].some((script) => script.dataset.vworld3dSrc === url);
+  if (existing) return Promise.resolve();
 
-function loadScript(url: string): Promise<void> {
-  if ([...document.scripts].some((script) => script.dataset.vworld3dSrc === url)) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.async = false;
     script.dataset.vworld3dSrc = url;
     script.src = url;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("VWorld 3D 로더를 불러오지 못했습니다."));
+    script.onerror = () => reject(new Error("VWorld 3D 의존 스크립트를 불러오지 못했습니다."));
     document.head.appendChild(script);
   });
 }
 
+let loaderPromise: Promise<void> | undefined;
+
 export function loadVWorld3D(): Promise<void> {
-  loaderPromise ??= (async () => {
-    if (!publicEnv.vworldApiKey) throw new Error("VWORLD_NOT_CONFIGURED");
-    await loadScript(buildVWorld3DLoaderUrl(publicEnv.vworldApiKey, resolveVWorldDomain(window.location.hostname)));
-    if (!vw3d()) throw new Error("VWorld 3D 런타임이 초기화되지 않았습니다.");
+  loaderPromise ??= (async () => {    if (!publicEnv.vworldApiKey) throw new Error("VWORLD_NOT_CONFIGURED");
+    if (getVw3D()) return;
+
+    // 3D 로더는 document.write로 엔진 스크립트를 주입한다.
+    // 페이지 로드 뒤에는 document.write가 차단되므로 2D와 같이 가로채서 직접 로드한다.
+    const loaderUrl = buildVWorld3DLoaderUrl(
+      publicEnv.vworldApiKey,
+      resolveVWorldDomain(window.location.hostname),
+    );
+    const scriptUrls: string[] = [];
+    const originalWrite = document.write.bind(document);
+    const originalWriteln = document.writeln.bind(document);
+    const captureMarkup = (markup: string) => {
+      scriptUrls.push(...extractVWorldScriptUrls(markup));
+    };
+    const loader = document.createElement("script");
+    loader.src = loaderUrl;
+    loader.async = false;
+
+    document.write = captureMarkup;
+    document.writeln = captureMarkup;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        loader.onload = () => resolve();
+        loader.onerror = () => reject(new Error("VWorld 3D 로더를 불러오지 못했습니다."));
+        document.head.appendChild(loader);
+      });
+    } finally {
+      document.write = originalWrite;
+      document.writeln = originalWriteln;
+    }
+
+    for (const url of [...new Set(scriptUrls)]) {
+      await loadExternalScript(url);
+    }
+    if (!getVw3D()) throw new Error("VWorld 3D 런타임이 초기화되지 않았습니다.");
   })().catch((error) => {
     loaderPromise = undefined;
     throw error;
@@ -176,8 +206,23 @@ export interface VWorld3DMap {
   dispose(): void;
 }
 
-export function createVWorld3DMap(containerId: string): VWorld3DMap | null {
-  const namespace = vw3d();
+function waitForViewer(timeoutMs = 15_000): Promise<Ws3dViewer | null> {
+  const startedAt = Date.now();
+  return new Promise((resolve) => {
+    const poll = () => {
+      const viewer = getViewer();
+      if (viewer || Date.now() - startedAt > timeoutMs) {
+        resolve(viewer);
+        return;
+      }
+      window.setTimeout(poll, 500);
+    };
+    poll();
+  });
+}
+
+export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMap | null> {
+  const namespace = getVw3D();
   const container = document.getElementById(containerId);
   if (!namespace || !container) return null;
   try {
@@ -193,9 +238,16 @@ export function createVWorld3DMap(containerId: string): VWorld3DMap | null {
     });
     map.setMapId?.(containerId);
     map.start?.();
-    const viewer = getViewer();
+    // start() 뒤 viewer가 비동기로 붙으므로 폴링으로 기다린다.
+    const viewer = await waitForViewer();
     if (!viewer) {
-      if (typeof map.destroy === "function") map.destroy();
+      if (typeof map.destroy === "function") {
+        try {
+          map.destroy();
+        } catch {
+          /* ignore */
+        }
+      }
       return null;
     }
     return {

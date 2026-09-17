@@ -335,6 +335,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `c3865c9 fix: wait for dataset catalog before 3D snapshot resolution`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01c 로더 가로채기·viewer 대기
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts`(document.write 가로채기·생성자 감지·viewer 폴링), `src/components/VWorld3DMap.tsx`(await)
+- 결정/데이터: Production 스크린샷의 "런타임 초기화 실패"는 엔진 미로드였다. 3D 로더가 document.write로 3개 엔진 스크립트를 주입하는데 페이지 로드 뒤라 차단된 것. 2D와 같은 가로채기 방식으로 수정. viewer는 start() 뒤 비동기로 붙어 15초 폴링 추가
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 로더 JS 실측(3개 document.write 확인). 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

@@ -78,7 +78,8 @@ export function VWorld3DMap() {
         if (kosisResult.error || !kosisResult.snapshot) throw new Error("KOSIS 공개 snapshot을 읽지 못했습니다.");        setBoundaries(boundaryResult.data);
         setDataset(kosisResult);
 
-        const handle = createVWorld3DMap(mapId);
+        const handle = await createVWorld3DMap(mapId);
+        if (cancelled) return;
         if (!handle) throw new Error("VWorld 3D 런타임을 초기화하지 못했습니다.");
         mapRef.current = handle;
         renderPrisms(handle, boundaryResult.data, kosisResult, heightScaleRef.current);
