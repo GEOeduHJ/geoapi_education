@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   epsg5179ToWebMercator,
+  ESRI_ATTRIBUTION,
   extractVWorldScriptUrls,
   getChoroplethColor,
   getStationThematicColor,
@@ -56,7 +57,12 @@ describe("VWorld 2D loader helpers", () => {
       "GRAPHIC_NIGHT",
       "PHOTO",
       "PHOTO_HYBRID",
+      "ESRI_GRAY",
     ]);
     expect(VWORLD_BASEMAP_OPTIONS[0].label).toBe("백지도");
+  });
+
+  it("exposes the Esri attribution required with the gray canvas tiles", () => {
+    expect(ESRI_ATTRIBUTION).toContain("OpenStreetMap contributors");
   });
 });

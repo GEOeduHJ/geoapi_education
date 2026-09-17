@@ -430,6 +430,8 @@ git log --oneline -5
 
 | 2026-09-17 | OpenCode | PHASE-B2: 4종 적재·연평균 집계·ready 7개 | `88c9f20` | typecheck/test(92)/build 통과, 실측 조인 4건 통과 |
 | 2026-09-17 | OpenCode | QUERY-UX: 조건·시각화 섹션 분리, 연도 선택 상단화 | `bb362be` | typecheck/test(92)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | ESRI-BASEMAP: NGII 원복 후 밝은 회색지도 옵션 (브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위
 

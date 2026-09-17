@@ -1,4 +1,4 @@
-import { buildVWorldLoaderUrl } from "./api/requests";
+import { buildEsriCanvasTileUrl, buildVWorldLoaderUrl } from "./api/requests";
 import { hasVWorldClientConfig, publicEnv, resolveVWorldDomain } from "./env";
 import type { ClimateStation } from "./climate";
 import type { BoundaryJoinValue } from "./geo-join";
@@ -52,9 +52,11 @@ interface OpenLayersNamespace {
   };
   layer: {
     Vector: new (options: { source: VWorldVectorSource }) => VWorldLayer;
+    Tile: new (options: { source: unknown }) => VWorldLayer;
   };
   source: {
     Vector: new (options: { features: VWorldFeature[] }) => VWorldVectorSource;
+    XYZ: new (options: { url: string; crossOrigin?: string }) => VWorldVectorSource;
   };
   style: {
     Circle: new (options: { radius: number; fill: unknown; stroke: unknown }) => unknown;
@@ -118,6 +120,11 @@ export const VWORLD_BASEMAP_OPTIONS = [
     label: "항공사진+표시",
     description: "항공 영상과 주요 지명·도로 표시를 함께 제공하는 배경",
   },
+  {
+    key: "ESRI_GRAY",
+    label: "밝은 회색지도",
+    description: "Esri 밝은 회색 캔버스(OSM 기반) · 주제 레이어용 최소 배경",
+  },
 ] as const;
 
 export type VWorldBasemapKey = typeof VWORLD_BASEMAP_OPTIONS[number]["key"];
@@ -125,6 +132,10 @@ export type VWorldBasemapKey = typeof VWORLD_BASEMAP_OPTIONS[number]["key"];
 export function getVWorldBasemapOption(key: VWorldBasemapKey) {
   return VWORLD_BASEMAP_OPTIONS.find((option) => option.key === key) ?? VWORLD_BASEMAP_OPTIONS[0];
 }
+
+export const ESRI_GRAY_BASEMAP_KEY = "ESRI_GRAY" as const;
+/** Esri Light Gray Canvas attribution (required when these tiles are shown). */
+export const ESRI_ATTRIBUTION = "Esri, HERE, Garmin, OpenStreetMap contributors";
 
 declare global {
   interface Window {
@@ -315,6 +326,7 @@ function createBoundaryFeature(
 
 const boundaryLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
 const stationLayerByMap = new WeakMap<VWorldMap, VWorldLayer>();
+const esriLayerByMap = new WeakMap<VWorldMap, VWorldLayer[]>();
 const CHOROPLETH_COLORS = [
   "rgba(229, 241, 236, 0.76)",
   "rgba(167, 218, 198, 0.78)",
@@ -471,9 +483,56 @@ export function setVWorld2DBasemap(
   map: VWorldMap,
   key: VWorldBasemapKey,
 ): boolean {
-  if (typeof map.setBasemapType !== "function") return false;
+  const wantEsri = key === ESRI_GRAY_BASEMAP_KEY;
+  if (typeof map.setBasemapType === "function") {
+    try {
+      map.setBasemapType(resolveVWorldBasemapType(runtime, wantEsri ? "GRAPHIC_WHITE" : key));
+    } catch {
+      if (!wantEsri) return false;
+    }
+  }
+  return updateEsriGrayLayer(runtime, map, wantEsri);
+}
+
+/**
+ * Adds or removes the Esri Light Gray Canvas raster tiles (base + reference).
+ * Vector layers are temporarily lifted so the opaque tiles sit underneath.
+ * XYZ raster layers predate modern OpenLayers vector tiles, so this works
+ * with the VWorld-bundled runtime. Returns false when unavailable.
+ */
+export function updateEsriGrayLayer(
+  runtime: VWorld2DRuntime,
+  map: VWorldMap,
+  enabled: boolean,
+): boolean {
+  const previousLayers = esriLayerByMap.get(map) ?? [];
+  for (const layer of previousLayers) map.removeLayer(layer);
+  esriLayerByMap.delete(map);
+  if (!enabled) return true;
+  if (typeof runtime.ol.layer.Tile !== "function"
+    || typeof runtime.ol.source.XYZ !== "function") {
+    return false;
+  }
+
   try {
-    map.setBasemapType(resolveVWorldBasemapType(runtime, key));
+    const layers = (["base", "reference"] as const).map((kind) => {
+      const source = new runtime.ol.source.XYZ({
+        url: buildEsriCanvasTileUrl(kind),
+        crossOrigin: "anonymous",
+      });
+      const layer = new runtime.ol.layer.Tile({ source });
+      layer.set("name", `Esri 밝은 회색 캔버스 · ${kind}`);
+      return layer;
+    });
+
+    const boundaryLayer = boundaryLayerByMap.get(map);
+    const stationLayer = stationLayerByMap.get(map);
+    if (boundaryLayer) map.removeLayer(boundaryLayer);
+    if (stationLayer) map.removeLayer(stationLayer);
+    for (const layer of layers) map.addLayer(layer);
+    if (boundaryLayer) map.addLayer(boundaryLayer);
+    if (stationLayer) map.addLayer(stationLayer);
+    esriLayerByMap.set(map, layers);
     return true;
   } catch {
     return false;
@@ -537,6 +596,9 @@ export function createVWorld2DMap(
 }
 
 export function disposeVWorld2DMap(runtime: VWorld2DRuntime, map: VWorldMap): void {
+  const esriLayers = esriLayerByMap.get(map) ?? [];
+  for (const layer of esriLayers) map.removeLayer(layer);
+  esriLayerByMap.delete(map);
   const boundaryLayer = boundaryLayerByMap.get(map);
   if (boundaryLayer) {
     map.removeLayer(boundaryLayer);

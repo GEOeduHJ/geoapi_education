@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDataPortalUrl,
+  buildEsriCanvasTileUrl,
   buildKmaHubUrl,
   buildSgisAuthUrl,
   buildVWorldLoaderUrl,
@@ -28,5 +29,12 @@ describe("API request builders", () => {
     );
     expect(buildVWorldLoaderUrl("v-key", "localhost")).toContain("domain=localhost");
     expect(buildSgisAuthUrl("https://example.test/auth", "consumer", "secret")).toContain("consumer_key=consumer");
+  });
+
+  it("builds keyless Esri canvas tile URLs with ArcGIS z/y/x order", () => {
+    expect(buildEsriCanvasTileUrl("base")).toBe(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    );
+    expect(buildEsriCanvasTileUrl("reference")).toContain("World_Light_Gray_Reference");
   });
 });

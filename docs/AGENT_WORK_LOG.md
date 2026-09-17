@@ -204,6 +204,28 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 배포 후 렌더 확인
 - 커밋: `bb362be feat: unified query section with dataset, year and boundary controls`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — NGII-BASEMAP 교육용 백지도 옵션
+
+- 결과: 부분 완료 (구현済, 타일 실측 차단)
+- 변경: `src/lib/api/requests.ts`(`buildNgiiWmtsUrl`), `src/lib/env.ts`(`VITE_NGII_WMTS_KEY`), `src/lib/vworld2d.ts`(NGII_EDU 옵션·WMTS 레이어 관리·EPSG:5179 그리드), `src/components/VWorld2DMap.tsx`(키 있을 때만 옵션 노출·실패 안내), 테스트 2개 추가, `.env.example`(변수명만)
+- 결정/데이터: 키는 `.env.local`에만 저장하고 Git·문서·코드에 값을 남기지 않음. 레이어명 `white_edu_map`·matrixSet `EPSG:5179`·L05~L18은 공개 ol-ngii 샘플 기준. 서버 직접 타일 요청이 빈 200만 반환해 키 미활성(승인 대기) 또는 도메인 등록 문제로 판단, 브라우저 확인으로 이관
+- 검증: typecheck/test(94)/build 통과, dev 서버 200. WMTS 타일 렌더·EPSG:5179 extent·PNG/PDF export는 브라우저에서 확인 필요
+- 브라우저/API: NGII Gettile 서버 실측(빈 응답). 키 값 기록 없음
+- 차단/주의: 국토정보플랫폼에서 키 활성화 상태와 등록 도메인/Referer 조건을 먼저 확인해야 함
+- 다음 작업: 키 활성화 후 브라우저에서 교육용 백지도 선택·주제도 겹침·export 확인
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — ESRI-BASEMAP 밝은 회색지도 옵션
+
+- 결과: 부분 완료 (구현済, 브라우저 렌더 확인 대기)
+- 변경: `src/lib/api/requests.ts`(`buildEsriCanvasTileUrl`), `src/lib/vworld2d.ts`(ESRI_GRAY 옵션·XYZ 레이어 관리·출처 상수), `src/components/VWorld2DMap.tsx`(실패 안내·출처 캡션), 테스트 2개 추가. NGII 구현은 키 미활성으로 전면 원복했고 `.env.local` 키도 삭제함(채팅 노출분은 재발급 권장)
+- 결정/데이터: CARTO 키 필수화·OSMF 정책·정부 표기 감사(2026-01)를 근거로 외산 OSM 직접 타일 대신 Esri Light Gray Canvas(Base+Reference, 키 불필요, OSM 기여자 포함 표기) 선정. XYZ 래스터라 VWorld 구형 runtime과 호환. OpenFreeMap 벡터는 런타임 버전 리스크로 보류
+- 검증: typecheck/test(94)/build 통과, dev 서버 200. Esri 타일 200 실측. 한글 라벨·동해 표기·주제도 겹침·export는 브라우저 확인 필요
+- 브라우저/API: Esri 타일 서버 실측(HTTP 200). 키 없음
+- 차단/주의: 없음
+- 다음 작업: 브라우저에서 밝은 회색지도 선택·주제도 겹침·출처 표시 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

@@ -8,9 +8,12 @@ import { hasVWorldClientConfig, resolveVWorldDomain } from "../lib/env";
 import {
   createVWorld2DMap,
   disposeVWorld2DMap,
+  ESRI_ATTRIBUTION,
+  ESRI_GRAY_BASEMAP_KEY,
   getVWorldBasemapOption,
   loadVWorld2D,
   setVWorld2DBasemap,
+  updateEsriGrayLayer,
   updateVWorld2DBoundaryLayer,
   updateVWorld2DStationLayer,
   VWORLD_BASEMAP_OPTIONS,
@@ -21,6 +24,8 @@ import type { BoundaryJoinValue } from "../lib/geo-join";
 import type { SgisBoundaryResponse } from "../lib/sgis";
 
 type MapStatus = "idle" | "loading" | "ready" | "error";
+
+const TILE_LAYER_ERROR_MESSAGE = "밝은 회색지도를 표시하지 못했습니다. VWorld 배경으로 되돌려 사용하세요.";
 
 export function VWorld2DMap({
   boundaries = null,
@@ -49,6 +54,7 @@ export function VWorld2DMap({
   const [stationError, setStationError] = useState<string | null>(null);
   const [mapStatus, setMapStatus] = useState<MapStatus>("idle");
   const [mapError, setMapError] = useState<string | null>(null);
+  const [tileLayerError, setTileLayerError] = useState<string | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [basemapType, setBasemapType] = useState<VWorldBasemapKey>("GRAPHIC_WHITE");
   const basemapTypeRef = useRef<VWorldBasemapKey>("GRAPHIC_WHITE");
@@ -101,6 +107,9 @@ export function VWorld2DMap({
       const map = createVWorld2DMap(runtime, mapId, displayStations, setSelectedStationId, basemapTypeRef.current, stationValuesRef.current);
       mapRef.current = { runtime, map };
       updateVWorld2DBoundaryLayer(runtime, map, boundariesRef.current, boundaryValuesRef.current);
+      if (basemapTypeRef.current === ESRI_GRAY_BASEMAP_KEY) {
+        setTileLayerError(updateEsriGrayLayer(runtime, map, true) ? null : TILE_LAYER_ERROR_MESSAGE);
+      }
       setMapStatus("ready");
     }).catch((error) => {
       if (cancelled) return;
@@ -121,7 +130,11 @@ export function VWorld2DMap({
     basemapTypeRef.current = basemapType;
     const currentMap = mapRef.current;
     if (!currentMap) return;
-    setVWorld2DBasemap(currentMap.runtime, currentMap.map, basemapType);
+    setTileLayerError(
+      !setVWorld2DBasemap(currentMap.runtime, currentMap.map, basemapType) && basemapType === ESRI_GRAY_BASEMAP_KEY
+        ? TILE_LAYER_ERROR_MESSAGE
+        : null,
+    );
   }, [basemapType]);
 
   const thematicSummary = useMemo(() => {
@@ -162,6 +175,7 @@ export function VWorld2DMap({
         />
         <div className="vworld-map-caption">
           <span>VWORLD 2D · {showStations ? "KMA ASOS" : "SGIS BOUNDARY"}</span>
+          {basemapType === ESRI_GRAY_BASEMAP_KEY && <span>배경 출처: {ESRI_ATTRIBUTION}</span>}
           {showStations && <span>{displayStations.length ? `${displayStations.length}개 관측소` : "관측소 불러오는 중"}</span>}
           {boundaries && <span>{boundaries.data.features.length}개 경계</span>}
           {thematicSummary && <span>{thematicSummary.count}개 경계값</span>}
@@ -185,6 +199,7 @@ export function VWorld2DMap({
             {VWORLD_BASEMAP_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
           </select>
           <small>{basemapOption.description}</small>
+          {tileLayerError && <small className="field-help field-help--error" role="alert">{tileLayerError}</small>}
         </div>
         {mapStatus === "loading" && <div className="vworld-map-message" role="status">VWorld 2D 지도를 준비하는 중입니다…</div>}
         {mapStatus === "error" && <div className="vworld-map-message vworld-map-message--error" role="alert"><strong>지도를 불러오지 못했습니다.</strong><span>{fallbackMessage ?? mapError ?? "VWorld 등록 domain과 브라우저 키를 확인하세요."}</span><small>현재 domain: {domain || "미설정"}</small></div>}

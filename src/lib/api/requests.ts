@@ -58,3 +58,12 @@ export function buildSgisAuthUrl(
   url.searchParams.set("consumer_secret", consumerSecret);
   return url.toString();
 }
+
+/**
+ * Esri Light Gray Canvas raster tiles (no key, attribution required).
+ * `{z}/{y}/{x}` order matches the ArcGIS tile path convention.
+ */
+export function buildEsriCanvasTileUrl(kind: "base" | "reference"): string {
+  const layer = kind === "reference" ? "World_Light_Gray_Reference" : "World_Light_Gray_Base";
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
+}
