@@ -11,7 +11,7 @@ import { SgisBoundaryStatusPanel, type SgisBoundaryPanelStatus } from "../compon
 import { VWorld2DMap } from "../components/VWorld2DMap";
 import { useDatasetCatalog, type DatasetScope } from "../lib/dataset-catalog";
 import { lawCodeToSgisAdmCds, type ClimateMetric } from "../lib/climate";
-import { fetchLatestPublicKosisDataset, type PublicKosisDataset } from "../lib/geo-observations";
+import { fetchLatestPublicKosisDataset, fetchPublicKosisDataset, aggregateObservationsByRegion, filterObservationsByYear, listObservationYears, type PublicKosisDataset } from "../lib/geo-observations";
 import { joinKosisObservationsToSgisBoundaries, type BoundaryJoinValue } from "../lib/geo-join";
 import { KOSIS_SGG_TO_SGIS_ADM_CD } from "../lib/kosis-crosswalk";
 import { fetchSgisBoundaries, buildDomesticSidoBoundaryQuery, type SgisBoundaryResponse } from "../lib/sgis";
@@ -112,11 +112,12 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
   const [sgisBoundaryError, setSgisBoundaryError] = useState<string | null>(null);
   const [kosisStatus, setKosisStatus] = useState<KosisPanelStatus>("idle");
   const [kosisDataset, setKosisDataset] = useState<PublicKosisDataset>(EMPTY_PUBLIC_KOSIS_DATASET);
+  const [kosisYear, setKosisYear] = useState("");
   const mapExportRef = useRef<HTMLDivElement | null>(null);
   const datasets = useDatasetCatalog(scope);
   const dataset = datasets.find((entry) => entry.key === datasetKey) ?? null;
   const isKma = datasetKey === "kma-asos-climate-10y";
-  const isKosis = datasetKey === "kosis-sido-city-park-per-capita";
+  const isKosisDataset = isDomestic && !isThreeD && dataset?.provider === "KOSIS";
   const climateState = useClimateDataset(metric, from, to, undefined, isKma && !isThreeD);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     setSgisBoundaryStatus("loading");
     setSgisBoundaries(null);
     setSgisBoundaryError(null);
-    if (isKosis) {
+    if (isKosisDataset) {
       setKosisStatus("loading");
       setKosisDataset(EMPTY_PUBLIC_KOSIS_DATASET);
     } else {
@@ -152,8 +153,10 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       setSgisBoundaries(boundaryResult.data);
       setSgisBoundaryError(boundaryResult.error);
       setSgisBoundaryStatus(boundaryResult.error ? "error" : "ready");
-      if (!isKosis) return;
-      const kosisResult = await fetchLatestPublicKosisDataset();
+      if (!isKosisDataset) return;
+      const kosisResult = dataset?.snapshotId
+        ? await fetchPublicKosisDataset(dataset.snapshotId)
+        : await fetchLatestPublicKosisDataset();
       if (cancelled) return;
       setKosisDataset(kosisResult);
       setKosisStatus(kosisResult.error ? "error" : kosisResult.snapshot ? "ready" : "empty");
@@ -162,13 +165,13 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
       if (cancelled) return;
       setSgisBoundaryStatus("error");
       setSgisBoundaryError("SGIS_BOUNDARY_REQUEST_FAILED");
-      if (isKosis) {
+      if (isKosisDataset) {
         setKosisStatus("error");
         setKosisDataset({ ...EMPTY_PUBLIC_KOSIS_DATASET, error: "PUBLIC_KOSIS_READ_FAILED" });
       }
     });
     return () => { cancelled = true; };
-  }, [isDomestic, isKosis, isThreeD]);
+  }, [isDomestic, isKosisDataset, isThreeD, dataset?.snapshotId]);
 
   const visibleBoundaries = useMemo<SgisBoundaryResponse | null>(() => {
     if (!sgisBoundaries || !boundaryCode) return sgisBoundaries;
@@ -181,9 +184,19 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
     };
   }, [boundaryCode, sgisBoundaries]);
 
+  const availableKosisYears = useMemo(
+    () => listObservationYears(kosisDataset.observations),
+    [kosisDataset.observations],
+  );
+  const effectiveKosisYear = availableKosisYears.includes(kosisYear) ? kosisYear : (availableKosisYears[0] ?? "");
+  const yearFilteredKosisObservations = useMemo(
+    () => aggregateObservationsByRegion(effectiveKosisYear ? filterObservationsByYear(kosisDataset.observations, effectiveKosisYear) : kosisDataset.observations),
+    [kosisDataset.observations, effectiveKosisYear],
+  );
+
   const boundaryJoin = useMemo(
-    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, kosisDataset.observations, { codeMap: KOSIS_SGG_TO_SGIS_ADM_CD }),
-    [kosisDataset.observations, visibleBoundaries],
+    () => joinKosisObservationsToSgisBoundaries(visibleBoundaries, yearFilteredKosisObservations, { codeMap: KOSIS_SGG_TO_SGIS_ADM_CD }),
+    [yearFilteredKosisObservations, visibleBoundaries],
   );
 
   const visibleStationIds = useMemo(() => {
@@ -274,11 +287,11 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
             <VWorld2DMap
               boundaries={visibleBoundaries}
               boundaryValues={
-                isKosis && boundaryJoin.status === "ready" ? boundaryJoin.values :
+                isKosisDataset && boundaryJoin.status === "ready" ? boundaryJoin.values :
                 isKma && kmaAggregatedBoundaryValues ? kmaAggregatedBoundaryValues :
                 null
               }
-              boundaryValueLabel={isKosis ? "KOSIS 값" : isKma ? "KMA 경계별 평균" : "경계값"}
+              boundaryValueLabel={isKosisDataset ? "KOSIS 값" : isKma ? "KMA 경계별 평균" : "경계값"}
               stationValues={null}
               visibleStationIds={[]}
               showStations={false}
@@ -291,11 +304,11 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
           <div className="sidebar-section">
             <p className="eyebrow">01 · DATASET</p>
             <h3>{scope === "domestic" ? "국내 자료 선택" : "세계 자료 선택"}</h3>
-            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); }} />
+            <DatasetSelector scope={scope} value={datasetKey} onChange={(next) => { setDatasetKey(next); setBoundaryCode(""); setKosisYear(""); }} />
             {dataset?.status === "planned" && <div className="dataset-planned-message" role="status"><strong>이 데이터셋은 아직 공개 자료로 전환되지 않았습니다.</strong><span>관리자가 원자료 범위·코드·출처를 확인하고 snapshot을 공개하면 지도·그래프·표가 활성화됩니다.</span></div>}
-            {!isThreeD && isKosis && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
-            {!isThreeD && isKosis && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
-            {!isThreeD && isKosis && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
+            {!isThreeD && isKosisDataset && <KosisPublicSnapshotPanel status={kosisStatus} dataset={kosisDataset} />}
+            {!isThreeD && isKosisDataset && <SgisBoundaryStatusPanel status={sgisBoundaryStatus} data={sgisBoundaries} error={sgisBoundaryError} />}
+            {!isThreeD && isKosisDataset && <KosisBoundaryJoinStatusPanel result={boundaryJoin} loading={kosisStatus === "loading" || sgisBoundaryStatus === "loading"} error={kosisDataset.error ?? sgisBoundaryError} />}
           </div>
           {!isThreeD && isDomestic && (
             <div className="sidebar-section">
@@ -328,7 +341,7 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
         </aside>
       </section>
       {!isThreeD && isDomestic && isKma && <Climate2DWorkspace metric={metric} from={from} to={to} onMetricChange={setMetric} onFromChange={setFrom} onToChange={setTo} state={climateViewState} />}
-      {!isThreeD && isDomestic && isKosis && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} />}
+      {isKosisDataset && <Kosis2DWorkspace datasetTitle={dataset?.title ?? ""} sourceUrl={dataset?.sourceUrl ?? ""} status={kosisStatus} snapshot={kosisDataset.snapshot} joinResult={boundaryJoin} boundaryNames={boundaryNames} error={kosisDataset.error ?? sgisBoundaryError} availableYears={availableKosisYears} selectedYear={effectiveKosisYear} onYearChange={setKosisYear} exportSlug={datasetKey} />}
       {!isThreeD && isDomestic && <MaterialExportActions targetRef={mapExportRef} fileName="geolab-2d-map" />}
     </div>
   );

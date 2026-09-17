@@ -26,6 +26,10 @@ export function Kosis2DWorkspace({
   joinResult,
   boundaryNames,
   error,
+  availableYears,
+  selectedYear,
+  onYearChange,
+  exportSlug,
 }: {
   datasetTitle: string;
   sourceUrl: string;
@@ -34,6 +38,10 @@ export function Kosis2DWorkspace({
   joinResult: BoundaryJoinResult;
   boundaryNames: Record<string, string>;
   error: string | null;
+  availableYears: string[];
+  selectedYear: string;
+  onYearChange: (year: string) => void;
+  exportSlug: string;
 }) {
   const exportRef = useRef<HTMLElement | null>(null);
   const [view, setView] = useState<"chart" | "table">("chart");
@@ -45,8 +53,8 @@ export function Kosis2DWorkspace({
   const chartSpec = useMemo(() => toKosisChartSpec(records), [records]);
   const tableModel = useMemo(() => toKosisTableModel(records), [records]);
   const provenance = useMemo(
-    () => toKosisProvenance(snapshot, records, datasetTitle, sourceUrl),
-    [snapshot, records, datasetTitle, sourceUrl],
+    () => toKosisProvenance(snapshot, records, datasetTitle, sourceUrl, selectedYear || undefined),
+    [snapshot, records, datasetTitle, sourceUrl, selectedYear],
   );
 
   const values = chartSpec.records.map((record) => chartSpec.yField(record));
@@ -56,7 +64,7 @@ export function Kosis2DWorkspace({
   const unit = records[0]?.unit ?? "";
 
   async function handleExportCsv() {
-    await exportTableAsCsv(tableModel, "geolab-2d-kosis-park");
+    await exportTableAsCsv(tableModel, `geolab-2d-${exportSlug}`);
   }
 
   const showResults = status === "ready" && joinResult.status === "ready" && records.length > 0;
@@ -73,10 +81,11 @@ export function Kosis2DWorkspace({
       </div>
 
       <div className="climate-2d-controls" data-export-ignore="true" aria-label="2D 통계자료 보기 방식">
+        <label><span>연도</span><select value={selectedYear} onChange={(event) => onYearChange(event.target.value)} disabled={availableYears.length === 0}>{availableYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
         <label><span>보조 표현</span><select value={view} onChange={(event) => setView(event.target.value as "chart" | "table")}><option value="chart">그래프</option><option value="table">표</option></select></label>
       </div>
 
-      <MaterialExportActions targetRef={exportRef} fileName="geolab-2d-kosis-park" onExportCsv={showResults ? handleExportCsv : undefined} />
+      <MaterialExportActions targetRef={exportRef} fileName={`geolab-2d-${exportSlug}`} onExportCsv={showResults ? handleExportCsv : undefined} />
 
       {status === "loading" && <div className="climate-message" role="status">저장된 통계자료를 불러오는 중입니다…</div>}
       {status === "error" && <div className="climate-message climate-message--error" role="alert"><strong>자료를 불러오지 못했습니다.</strong><span>공개 KOSIS snapshot 읽기 상태를 확인하세요.</span>{error && <small>{error}</small>}</div>}

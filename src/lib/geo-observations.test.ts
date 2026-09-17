@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  aggregateObservationsByRegion,
+  filterObservationsByYear,
+  listObservationYears,
   normalizePublicObservation,
   normalizePublicSnapshot,
+  type PublicGeoObservation,
 } from "./geo-observations";
 
 describe("public geo observation normalization", () => {
@@ -59,5 +63,80 @@ describe("public geo observation normalization", () => {
   it("rejects rows without database identity fields", () => {
     expect(normalizePublicSnapshot({ data_source_id: "source-1" })).toBeNull();
     expect(normalizePublicObservation({ snapshot_id: "snapshot-1", value: 12 })).toBeNull();
+  });
+});
+
+function yearObservation(id: string, observedAt: string | null): PublicGeoObservation {
+  return {
+    id,
+    snapshot_id: "snapshot-1",
+    observed_at: observedAt,
+    region_code: "11",
+    label: "서울",
+    value: 1,
+    unit: "천㎡",
+    category: null,
+    attributes: {},
+  };
+}
+
+describe("observation year selection", () => {
+  const observations = [
+    yearObservation("o-1", "2025-01-01T00:00:00+00:00"),
+    yearObservation("o-2", "2024-01-01T00:00:00+00:00"),
+    yearObservation("o-3", "2025-01-01T00:00:00+00:00"),
+    yearObservation("o-4", null),
+  ];
+
+  it("lists distinct years in descending order, skipping timeless rows", () => {
+    expect(listObservationYears(observations)).toEqual(["2025", "2024"]);
+    expect(listObservationYears([])).toEqual([]);
+  });
+
+  it("filters to a single year so the join never sees mixed periods", () => {
+    expect(filterObservationsByYear(observations, "2025").map((o) => o.id)).toEqual(["o-1", "o-3"]);
+    expect(filterObservationsByYear(observations, "1999")).toEqual([]);
+    expect(filterObservationsByYear(observations, "")).toEqual([]);
+  });
+});
+
+function monthlyObservation(id: string, regionCode: string, observedAt: string, value: number | null): PublicGeoObservation {
+  return {
+    id,
+    snapshot_id: "snapshot-1",
+    observed_at: observedAt,
+    region_code: regionCode,
+    label: `지역 ${regionCode}`,
+    value,
+    unit: "대",
+    category: null,
+    attributes: {},
+  };
+}
+
+describe("regional yearly aggregation", () => {
+  it("returns yearly rows untouched", () => {
+    const rows = [
+      monthlyObservation("y-11", "11", "2024-01-01", 100),
+      monthlyObservation("y-21", "21", "2024-01-01", 200),
+    ];
+    expect(aggregateObservationsByRegion(rows)).toBe(rows);
+  });
+
+  it("averages monthly rows into one value per region", () => {
+    const rows = [
+      monthlyObservation("m-11-a", "11", "2024-01-01", 100),
+      monthlyObservation("m-11-b", "11", "2024-02-01", 200),
+      monthlyObservation("m-11-c", "11", "2024-03-01", null),
+      monthlyObservation("m-21-a", "21", "2024-01-01", 50),
+    ];
+    const aggregated = aggregateObservationsByRegion(rows);
+    expect(aggregated).toHaveLength(2);
+    expect(aggregated.find((row) => row.region_code === "11")).toMatchObject({
+      value: 150,
+      observed_at: "2024-01-01",
+      attributes: expect.objectContaining({ aggregated: "year-mean", source_count: 2 }),
+    });
+    expect(aggregated.find((row) => row.region_code === "21")).toMatchObject({ value: 50 });
   });
 });

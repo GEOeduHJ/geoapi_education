@@ -150,6 +150,49 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/2d/domestic`에서 KMA·KOSIS 전환 렌더 확인 후 국내 완성 선언, 이후 2D-04 착수 여부 결정
 - 커밋: `c695e54 feat: KOSIS chart, table and provenance workspace`에 포함 (origin/main push済, Vercel 배포 트리거)
 
+### 2026-09-17 — OpenCode — BREADTH 계획 (다중 API 자동 시각화)
+
+- 결과: 계획 수립 (코드 변경 없음)
+- 변경: `docs/AI_HANDOFF.md` (BREADTH 방향·후보·병목 기록)
+- 결정/데이터: KOSIS search 실측으로 시도급 후보 7종 확보(GRDP·사교육비·PM10/2.5·자동차·출산성비·사업체·공원). 표별 코드체계 상이 확인(24/36 분리형 표 존재). 다중화 병목 4건 특정(단일 snapshot 읽기·정적 카탈로그·연도 고정·isKosis 단일 분기)
+- 검증: KOSIS 검색 API 실측(HTTP 200). 키·원문 비밀값 기록 없음
+- 차단/주의: 없음
+- 다음 작업: Phase A 구조 일반화(아래 계획 참조) 또는 1차 배치 주제 확정
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — PHASE-A 구조 일반화
+
+- 결과: 완료
+- 변경: `src/lib/geo-observations.ts`(snapshot 지정/목록 읽기·연도 헬퍼), `src/lib/dataset-catalog.ts`(`snapshotId`), `src/pages/CreatePage.tsx`(지정 snapshot 읽기·연도 필터), `src/components/Kosis2DWorkspace.tsx`(연도 셀렉터·요청시점 전달), `src/lib/kosis-adapter.ts`(`requestedYear`), 테스트 4개 추가
+- 결정/데이터: 연도는 snapshot 통째 적재 + 조인 전 필터 방식(복수시점 색칠금지원칙 유지). DB 쓰기·API 호출 없음
+- 검증: `npm run typecheck` 통과, `npm test` 통과(19개 파일·89개 테스트), `npm run build` 통과
+- 브라우저/API: 미실시·없음. 현 snapshot 단일 연도라 실동작 동일
+- 차단/주의: 없음
+- 다음 작업: Phase B 1차 배치 적재 (인구·출산/경제/환경·교통/사업체·주택)
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — PHASE-B1 GRDP 적재·dataset-keyed 일반화
+
+- 결과: 완료
+- 변경: `src/lib/dataset-catalog.ts`(GRDP 정적 항목), `src/pages/CreatePage.tsx`(`isKosis`→`provider==="KOSIS"` dataset-keyed), `src/components/Kosis2DWorkspace.tsx`(exportSlug), 운영 DB에 GRDP snapshot 633행 공개 적재 + `dataset_catalog` published 2행(park·GRDP) 등록
+- 결정/데이터: `DT_1C96/T1` metadata 구체계 17코드 확인 → DRY-RUN 633행·결측 0 → `--write`→검증→`--write --public`. snapshot `b2e3a59f-6fa9-40ae-9730-abb27527da3f`. 지역별 시작연도 상이(광주 1987·대전 1989·울산 1998·세종 2013)는 승격 연도와 일치하는 정상 결측으로, 연도 필터가 정직하게 부분결합 표시
+- 검증: typecheck/test(89)/build 통과. anon 실측: 카탈로그 2행·snapshot 분리 정상. 실측 조인 park 2025 17/17·GRDP 2024 17/17·GRDP 1990 15+2 통과(일회성 테스트 후 삭제)
+- 브라우저/API: KOSIS 테이블 API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: 사교육비·PM10/PM2.5·자동차·출산성비·사업체 순차 적재
+- 커밋: 미커밋 로컬 변경
+
+### 2026-09-17 — OpenCode — PHASE-B2 배치 4종 적재
+
+- 결과: 완료
+- 변경: `src/lib/dataset-catalog.ts`(정적 4항목), `src/lib/geo-observations.ts`(`aggregateObservationsByRegion`), `src/lib/kosis-crosswalk.ts`(자동차 17건), 테스트 3개 추가, 운영 DB에 snapshot 4개·관측값 2,730행 공개 적재 + `dataset_catalog` published 4행 등록
+- 결정/데이터: 3중 분류 표는 `OBJ_ID_SN` 순서대로 objL1~3 필수. 106번대 PM10/PM2.5는 전수 조합 실패로 제외(에어코리아로 이관). 출산성비 29결측은 승격 전 정상 결측. 국내 ready 7개(KMA+KOSIS 6)
+- 검증: typecheck/test(92)/build 통과. 실측 조인 4건 통과(2000년 출생성비는 16+1 부분결합이 정상)
+- 브라우저/API: KOSIS API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
+- 차단/주의: 없음
+- 다음 작업: 배포 후 7개 dataset 렌더 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

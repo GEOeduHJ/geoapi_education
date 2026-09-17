@@ -8,11 +8,20 @@ describe("curated dataset catalog", () => {
     expect(getDatasets("world").every((dataset) => dataset.scope === "world")).toBe(true);
     expect(getDataset("kma-asos-climate-10y")?.capabilities).toEqual(["map", "chart", "table"]);
     expect(getDataset("kosis-sido-city-park-per-capita")?.capabilities).toEqual(["map", "chart", "table"]);
+    expect(getDataset("kosis-sido-grdp-per-capita")?.capabilities).toEqual(["map", "chart", "table"]);
+    expect(getDataset("kosis-sido-grdp-per-capita")).toMatchObject({
+      scope: "domestic",
+      provider: "KOSIS",
+      status: "ready",
+      storage: "supabase",
+      supportedLevels: ["sido"],
+      period: { min: "1985", max: "2024" },
+    });
   });
 
   it("marks only datasets with verified stored data as ready", () => {
     const ready = DATASET_CATALOG.filter((dataset) => dataset.status === "ready");
-    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita"]);
+    expect(ready.map((dataset) => dataset.key)).toEqual(["kma-asos-climate-10y", "kosis-sido-city-park-per-capita", "kosis-sido-grdp-per-capita", "kosis-sido-private-edu-cost", "kosis-sido-vehicle-registrations", "kosis-sido-birth-sex-ratio", "kosis-sido-business-count"]);
     expect(getDataset("kosis-sido-city-park-per-capita")?.storage).toBe("supabase");
     expect(getDataset("airkorea-station-daily")?.status).toBe("planned");
   });
@@ -97,6 +106,18 @@ describe("mapDatasetCatalogRow", () => {
   it("maps DB rows to scope-based supported levels (sido-only for domestic)", () => {
     expect(mapDatasetCatalogRow({ ...baseRow, scope: "domestic" })?.supportedLevels).toEqual(["sido"]);
     expect(mapDatasetCatalogRow(baseRow)?.supportedLevels).toEqual([]);
+  });
+
+  it("carries the linked snapshot id for multi-snapshot datasets", () => {
+    expect(mapDatasetCatalogRow(baseRow)?.snapshotId).toBeNull();
+    expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "snap-1" })?.snapshotId).toBe("snap-1");
+    expect(mapDatasetCatalogRow({ ...baseRow, snapshot_id: "  " })?.snapshotId).toBeNull();
+  });
+
+  it("leaves static entries unlinked so they read the latest public snapshot", () => {
+    for (const dataset of DATASET_CATALOG) {
+      expect(dataset.snapshotId).toBeNull();
+    }
   });
 });
 

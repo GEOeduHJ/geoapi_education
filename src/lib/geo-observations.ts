@@ -118,6 +118,48 @@ export async function fetchLatestPublicKosisSnapshot(): Promise<{ data: PublicSo
   };
 }
 
+/** Phase A 다중화: 카탈로그 행이 가리키는 특정 공개 snapshot을 읽는다. */
+export async function fetchPublicKosisSnapshotById(
+  snapshotId: string,
+): Promise<{ data: PublicSourceSnapshot | null; error: string | null }> {
+  const supabase = await getSupabaseClient();
+  if (!supabase) return { data: null, error: "SUPABASE_NOT_CONFIGURED" };
+  if (!snapshotId.trim()) return { data: null, error: "PUBLIC_KOSIS_SNAPSHOT_ID_REQUIRED" };
+
+  const result = await supabase
+    .from("source_snapshots")
+    .select(SNAPSHOT_COLUMNS)
+    .eq("id", snapshotId.trim())
+    .eq("schema_version", KOSIS_SNAPSHOT_SCHEMA)
+    .eq("is_public", true)
+    .maybeSingle();
+  if (result.error) return { data: null, error: result.error.message };
+  const data = normalizePublicSnapshot(result.data);
+  return {
+    data,
+    error: result.data && !data ? "PUBLIC_KOSIS_SNAPSHOT_INVALID" : null,
+  };
+}
+
+/** Phase A 다중화: 공개 KOSIS snapshot 목록 (최신순). 카탈로그·연도 선택의 재료다. */
+export async function fetchAllPublicKosisSnapshots(): Promise<{ data: PublicSourceSnapshot[]; error: string | null }> {
+  const supabase = await getSupabaseClient();
+  if (!supabase) return { data: [], error: "SUPABASE_NOT_CONFIGURED" };
+
+  const result = await supabase
+    .from("source_snapshots")
+    .select(SNAPSHOT_COLUMNS)
+    .eq("schema_version", KOSIS_SNAPSHOT_SCHEMA)
+    .eq("is_public", true)
+    .order("fetched_at", { ascending: false });
+  if (result.error) return { data: [], error: result.error.message };
+  const rows = Array.isArray(result.data) ? result.data : [];
+  return {
+    data: rows.map(normalizePublicSnapshot).filter((row): row is PublicSourceSnapshot => row !== null),
+    error: null,
+  };
+}
+
 export async function fetchPublicKosisObservations(
   snapshotId: string,
 ): Promise<{ data: PublicGeoObservation[]; truncated: boolean; error: string | null }> {
@@ -155,4 +197,87 @@ export async function fetchLatestPublicKosisDataset(): Promise<PublicKosisDatase
     truncated: observationResult.truncated,
     error: observationResult.error,
   };
+}
+
+/** Phase A 다중화: 특정 공개 snapshot의 dataset을 읽는다. */
+export async function fetchPublicKosisDataset(snapshotId: string): Promise<PublicKosisDataset> {
+  const snapshotResult = await fetchPublicKosisSnapshotById(snapshotId);
+  if (snapshotResult.error || !snapshotResult.data) {
+    return { snapshot: snapshotResult.data, observations: [], truncated: false, error: snapshotResult.error };
+  }
+
+  const observationResult = await fetchPublicKosisObservations(snapshotResult.data.id);
+  return {
+    snapshot: snapshotResult.data,
+    observations: observationResult.data,
+    truncated: observationResult.truncated,
+    error: observationResult.error,
+  };
+}
+
+/** 관측값에 들어있는 연도(observed_at 앞 4자리) 목록. 내림차순. */
+export function listObservationYears(observations: PublicGeoObservation[]): string[] {
+  const years = new Set<string>();
+  for (const observation of observations) {
+    const stamped = observation.observed_at?.slice(0, 4) ?? "";
+    if (/^\d{4}$/.test(stamped)) years.add(stamped);
+  }
+  return [...years].sort().reverse();
+}
+
+/**
+ * 연도 선택용 필터. 조인 전에 단일 시점으로 좁혀 `ambiguous-values`를
+ * 원천 차단한다. 시점이 없는 행은 어떤 연도에도 포함하지 않는다.
+ */
+export function filterObservationsByYear(
+  observations: PublicGeoObservation[],
+  year: string,
+): PublicGeoObservation[] {
+  if (!/^\d{4}$/.test(year)) return [];
+  return observations.filter((observation) => observation.observed_at?.slice(0, 4) === year);
+}
+
+/**
+ * 연도 필터 뒤에 남은 복수 시점 행(월별 등)을 지역별 연평균 하나로 합친다.
+ * 이미 지역당 1행이면 입력을 그대로 반환해 연간 표의 동작을 바꾸지 않는다.
+ * 합산 결과의 observed_at은 해당 연도 1월 1일로 정규화한다.
+ */
+export function aggregateObservationsByRegion(
+  observations: PublicGeoObservation[],
+): PublicGeoObservation[] {
+  const groups = new Map<string, PublicGeoObservation[]>();
+  for (const observation of observations) {
+    const code = observation.region_code?.trim() || "(코드 없음)";
+    const rows = groups.get(code) ?? [];
+    rows.push(observation);
+    groups.set(code, rows);
+  }
+
+  let needsAggregation = false;
+  for (const rows of groups.values()) {
+    if (rows.length > 1) {
+      needsAggregation = true;
+      break;
+    }
+  }
+  if (!needsAggregation) return observations;
+
+  const aggregated: PublicGeoObservation[] = [];
+  for (const rows of groups.values()) {
+    const first = rows[0];
+    const numeric = rows.filter(
+      (row) => typeof row.value === "number" && Number.isFinite(row.value),
+    );
+    if (numeric.length === 0) continue;
+    const mean = numeric.reduce((total, row) => total + (row.value as number), 0) / numeric.length;
+    const year = (first.observed_at ?? "").slice(0, 4);
+    aggregated.push({
+      ...first,
+      id: `${first.id}#year-avg`,
+      observed_at: /^\d{4}$/.test(year) ? `${year}-01-01` : first.observed_at,
+      value: mean,
+      attributes: { ...first.attributes, aggregated: "year-mean", source_count: numeric.length },
+    });
+  }
+  return aggregated;
 }

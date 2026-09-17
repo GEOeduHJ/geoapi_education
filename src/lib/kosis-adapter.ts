@@ -72,6 +72,7 @@ export function toKosisProvenance(
   records: NormalizedRecord[],
   datasetTitle: string,
   sourceUrl: string,
+  requestedYear?: string,
 ): Provenance {
   const stamps = records.map((record) => record.timestamp).filter(Boolean).sort();
   const unit = records[0]?.unit ?? "";
@@ -81,8 +82,8 @@ export function toKosisProvenance(
     sourceUrl,
     snapshotId: snapshot?.id,
     requestedPeriod: {
-      from: snapshot?.valid_from ?? stamps[0] ?? "",
-      to: snapshot?.valid_to ?? stamps.at(-1) ?? "",
+      from: requestedYear ?? snapshot?.valid_from ?? stamps[0] ?? "",
+      to: requestedYear ?? snapshot?.valid_to ?? stamps.at(-1) ?? "",
     },
     actualPeriod: {
       from: stamps[0] ?? "",

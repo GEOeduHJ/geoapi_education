@@ -26,6 +26,12 @@ export interface DatasetDefinition {
    * ["sido"]로 고정하고, 세계 dataset은 국내 경계를 쓰지 않아 []이다.
    */
   supportedLevels: BoundaryLevel[];
+  /**
+   * Phase A 다중화: 이 dataset이 읽을 공개 snapshot ID.
+   * DB `dataset_catalog.snapshot_id`와 연결되며, 정적 카탈로그는 null이다.
+   * null이면 기존처럼 최신 공개 snapshot을 읽는다.
+   */
+  snapshotId: string | null;
 }
 
 /**
@@ -49,6 +55,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://apihub.kma.go.kr/",
     storage: "supabase",
     supportedLevels: ["sido"],
+    snapshotId: null,
   },
   {
     key: "kosis-sido-city-park-per-capita",
@@ -65,6 +72,92 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://kosis.kr/",
     storage: "supabase",
     supportedLevels: ["sido"],
+    snapshotId: null,
+  },
+  {
+    key: "kosis-sido-grdp-per-capita",
+    scope: "domestic",
+    title: "시도별 1인당 지역내총생산",
+    provider: "KOSIS",
+    topic: "경제·지역격차",
+    space: "시도",
+    coverage: "17개 시도·1985~2024",
+    period: { min: "1985", max: "2024", label: "1985~2024" },
+    capabilities: ["map", "chart", "table"],
+    status: "ready",
+    description: "1985년 이후 시도별 1인당 GRDP를 공개 snapshot의 단계구분도·순위 그래프·자료표로 표시합니다. 연도를 선택하면 같은 조건으로 자동 갱신됩니다.",
+    sourceUrl: "https://kosis.kr/",
+    storage: "supabase",
+    supportedLevels: ["sido"],
+    snapshotId: null,
+  },
+  {
+    key: "kosis-sido-private-edu-cost",
+    scope: "domestic",
+    title: "시도별 학생 1인당 월평균 사교육비",
+    provider: "KOSIS",
+    topic: "교육",
+    space: "시도",
+    coverage: "17개 시도·2009~2025",
+    period: { min: "2009", max: "2025", label: "2009~2025" },
+    capabilities: ["map", "chart", "table"],
+    status: "ready",
+    description: "2009년 이후 시도별 학생 1인당 월평균 사교육비를 공개 snapshot의 단계구분도·순위 그래프·자료표로 표시합니다.",
+    sourceUrl: "https://kosis.kr/",
+    storage: "supabase",
+    supportedLevels: ["sido"],
+    snapshotId: null,
+  },
+  {
+    key: "kosis-sido-vehicle-registrations",
+    scope: "domestic",
+    title: "시도별 자동차등록대수",
+    provider: "KOSIS",
+    topic: "교통·생활",
+    space: "시도",
+    coverage: "17개 시도·2018~2026",
+    period: { min: "2018", max: "2026", label: "2018~2026" },
+    capabilities: ["map", "chart", "table"],
+    status: "ready",
+    description: "월별 자동차등록대수를 연평균으로 집계해 시도별 단계구분도·순위 그래프·자료표로 표시합니다.",
+    sourceUrl: "https://kosis.kr/",
+    storage: "supabase",
+    supportedLevels: ["sido"],
+    snapshotId: null,
+  },
+  {
+    key: "kosis-sido-birth-sex-ratio",
+    scope: "domestic",
+    title: "시도별 출생성비",
+    provider: "KOSIS",
+    topic: "인구·출산",
+    space: "시도",
+    coverage: "17개 시도·1990~2025",
+    period: { min: "1990", max: "2025", label: "1990~2025" },
+    capabilities: ["map", "chart", "table"],
+    status: "ready",
+    description: "1990년 이후 시도별 총출생성비를 공개 snapshot의 단계구분도·순위 그래프·자료표로 표시합니다. 승격 이전 시점의 결측은 비워 둡니다.",
+    sourceUrl: "https://kosis.kr/",
+    storage: "supabase",
+    supportedLevels: ["sido"],
+    snapshotId: null,
+  },
+  {
+    key: "kosis-sido-business-count",
+    scope: "domestic",
+    title: "시도별 사업체수",
+    provider: "KOSIS",
+    topic: "산업·경제",
+    space: "시도",
+    coverage: "17개 시도·2020~2024",
+    period: { min: "2020", max: "2024", label: "2020~2024" },
+    capabilities: ["map", "chart", "table"],
+    status: "ready",
+    description: "2020년 이후 시도별 전산업 사업체수를 공개 snapshot의 단계구분도·순위 그래프·자료표로 표시합니다.",
+    sourceUrl: "https://kosis.kr/",
+    storage: "supabase",
+    supportedLevels: ["sido"],
+    snapshotId: null,
   },
   {
     key: "airkorea-station-daily",
@@ -81,6 +174,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://www.data.go.kr/data/15073861/openapi.do",
     storage: "planned",
     supportedLevels: ["sido"],
+    snapshotId: null,
   },
   {
     key: "world-bank-population-density",
@@ -97,6 +191,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://data.worldbank.org/",
     storage: "planned",
     supportedLevels: [],
+    snapshotId: null,
   },
   {
     key: "open-meteo-city-climate",
@@ -113,6 +208,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://open-meteo.com/",
     storage: "planned",
     supportedLevels: [],
+    snapshotId: null,
   },
   {
     key: "usgs-earthquake-history",
@@ -129,6 +225,7 @@ export const DATASET_CATALOG: DatasetDefinition[] = [
     sourceUrl: "https://earthquake.usgs.gov/fdsnws/event/1/",
     storage: "planned",
     supportedLevels: [],
+    snapshotId: null,
   },
 ];
 
@@ -164,7 +261,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const CATALOG_COLUMNS =
-  "dataset_key,scope,title,provider,topic,space_label,coverage_label,period_min,period_max,period_label,capabilities,status,storage_mode,description,source_url";
+  "dataset_key,scope,title,provider,topic,space_label,coverage_label,period_min,period_max,period_label,capabilities,status,storage_mode,description,source_url,snapshot_id";
 
 /**
  * The DB `status` column (draft/published/retired) is a publishing workflow
@@ -207,6 +304,7 @@ export function mapDatasetCatalogRow(value: unknown): DatasetDefinition | null {
     // dataset_catalog 테이블에는 level 컬럼이 아직 없어 scope 기준으로 고정한다.
     // domestic published 행은 시도 단위까지만 보장되고, world 행은 국내 경계를 쓰지 않는다.
     supportedLevels: scope === "domestic" ? ["sido"] : [],
+    snapshotId: typeof value.snapshot_id === "string" && value.snapshot_id.trim() ? value.snapshot_id : null,
   };
 }
 

@@ -311,6 +311,38 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 
 **검증:** `npm run typecheck` 통과, `npm test` 통과(19개 파일·85개 테스트, 신규 4개), `npm run build` 통과, 로컬 dev 서버 `/create/2d/domestic` 200. 렌더 수준 확인은 브라우저 도구 부재로 미실시 — 배포 후 KOSIS 선택 시 17개 순위 그래프·표·CSV·provenance 1회 확인 필요.
 
+### BREADTH — 다중 API 자동 시각화 확장 (계획, 2026-09-17)
+
+**방향 (사용자 결정):** 최초 플랜대로 최대한 많은 API로 수집하고, 연도·데이터 선택 시 자동 시각화되는 사이트로 확장한다. SGIS와의 차별점은 수업용 계약(출처·결측·분모·탐구 연결·export)이다. 국내 2개 dataset 상태가 최종이 아니라 출발점이다.
+
+**실측 후보 (KOSIS 시도급, search 확인):** `DT_1C96` 1인당 GRDP (1985~2024), `DT_1PE105` 사교육비 (2009~2025), `DT_106N_03_0200076/0176` PM10/PM2.5 시도별 (2010~/2015~2025), `DT_MLTM_5498` 자동차등록 (2011~2026), `DT_1B81A19` 출산성비 (1990~2025), `DT_1K52F01` 사업체 (2020~2024). 표마다 지역코드 체계가 다르므로(구 24/36 분리형 존재) 표별 crosswalk가 필수다.
+
+**구조 병목 (해결해야 다중화가 됨):** (1) `fetchLatestPublicKosisDataset`이 최신 1개 snapshot만 읽음 → catalog→snapshot 연결 필요 (`dataset_catalog.snapshot_id` 컬럼은 이미 있음). (2) DB catalog 비어 있어 정적 6개 고정. (3) KOSIS 연도 고정 → snapshot 내 연도 필터 + 조인 전 단일시점 확정 필요. (4) `CreatePage`의 `isKosis` 단일 분기 → dataset-keyed 일반화 필요.
+
+### PHASE-A — 구조 일반화 (완료, 2026-09-17)
+
+**목적:** 표가 늘어도 코드 복제 없이 적재만으로 dataset이 되게 한다.
+
+**완료 내용:** `geo-observations.ts`에 snapshot 지정 읽기(`fetchPublicKosisSnapshotById`/`fetchPublicKosisDataset`), 공개 목록(`fetchAllPublicKosisSnapshots`), 연도 헬퍼(`listObservationYears`/`filterObservationsByYear`) 추가. `dataset-catalog.ts`에 `snapshotId` 연결(DB `snapshot_id` 컬럼→매핑, 정적 null). `CreatePage`가 카탈로그 snapshotId가 있으면 지정 snapshot, 없으면 최신 snapshot을 읽고, 연도 선택→조인 전 필터→지도·그래프·표·provenance에 동일 집합 전달. `Kosis2DWorkspace`에 연도 셀렉터 추가. 공유 SGG 대응표(`1224/1236`만 변환)는 구체계 표에 무해한 no-op이라 레지스트리 없이 유지.
+
+**검증:** `npm run typecheck` 통과, `npm test` 통과(19개 파일·89개 테스트, 신규 4개), `npm run build` 통과. 현 공개 snapshot이 단일 연도라 실데이터 동작은 기존과 동일, 다중 연도는 단위 테스트로 검증.
+
+### PHASE-B1 — GRDP 적재·dataset-keyed 일반화 (완료, 2026-09-17)
+
+**완료 내용:** `DT_1C96/T1` 1인당 GRDP metadata 확인(구체계 17코드, SGIS와 exact 일치) → DRY-RUN 633행·결측 0·1985~2024 → `--write`→검증→`--write --public` (snapshot `b2e3a59f-6fa9-40ae-9730-abb27527da3f`, checksum `cf09d78239257539…`). `CreatePage`의 `isKosis` 단일 분기를 `provider === "KOSIS"` dataset-keyed 판별로 일반화하고 CSV 파일명을 datasetKey 기반으로 변경. `dataset_catalog`에 park·GRDP published 행 2건 등록(snapshot 연결) — DB override 경로가 처음으로 실제 동작함(2D-01 잔여 해소). 정적 GRDP 항목도 추가.
+
+**검증:** typecheck/test(89)/build 통과. anon 경로 실측: 카탈로그 2행·올바른 snapshot 연결(park 17행/2025, GRDP 633행/1985~2024). 실측 조인 3건 통과: park 2025 17/17, GRDP 2024 17/17, GRDP 1990 15+2부분결합(세종·울산 이전 시점, 정직 표시). 지역별 연도 커버리지 상이(세종 2013~·울산 1998~·대전 1989~·광주 1987~)는 승격 연도와 일치하는 정상 결측.
+
+**다음:** 사교육비·PM10/PM2.5·자동차·출산성비·사업체 순차 적재 (동일 절차 반복, 코드 불필요).
+
+### PHASE-B2 — 배치 4종 적재·연평균 집계 (완료, 2026-09-17)
+
+**완료 내용:** 사교육비(284행)·자동차(1,749행 월별)·출생성비(612행, 승격 전 29결측)·사업체수(85행)를 `--write`→검증→`--public`으로 적재하고 `dataset_catalog` published 4행 + 정적 항목 4건을 등록. 국내 ready가 KMA 포함 7개가 됐다. 월별 표를 위해 `aggregateObservationsByRegion`(연평균, 연간 표는 identity)을 추가하고 `CreatePage` 조인 전에 적용. PM10/PM2.5(106번대)는 파라미터를 바꿔도 빈 응답이라 제외하고 에어코리아 직접 수집으로 이관.
+
+**검증:** typecheck/test(92)/build 통과. 실측 조인: 사교육비·사업체·출생성비 2025 17/17, 자동차 2024 연평균 17/17, 출생성비 2000 16+1부분(세종만 결측). 상세 적재 기록은 `docs/KOSIS_ADAPTER.md` 참조.
+
+**다음:** 배포 후 7개 dataset 전환·연도 슬라이더 렌더 확인.
+
 ### 2D-04 — World Bank 세계 2D 수직 슬라이스 (보류: 국내 완성 후)
 
 **보류 (2026-09-17, 사용자 결정):** 세계 지도 제작은 국내 지도가 완성된 뒤에 착수한다. 국내 완성의 정의는 KMA·KOSIS가 시도 단위에서 지도·그래프·표·출처·export를 모두 제공하는 상태이며, 현재 KOSIS 그래프·표·provenance가 잔여다.
@@ -386,6 +418,9 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | 2D-03 완료: 0005/0006 확인·snapshot 적재·공개·실측 조인 17/17 검증 | `12402f4` | typecheck/test(81)/build 통과, anon 공개 읽기 확인 |
 | 2026-09-17 | OpenCode | KOSIS ready 전환(map only)·국내 Audit·세계 연기·통합 커밋 | `12402f4` | typecheck/test(81)/build 통과 |
 | 2026-09-17 | OpenCode | KOSIS-VIZ: 그래프·표·provenance 연결, capabilities 복원 | `c695e54` | typecheck/test(85)/build 통과, dev 서버 200 확인 |
+| 2026-09-17 | OpenCode | PHASE-A: 다중 snapshot·연도 필터·catalog 연결 | 미커밋 로컬 변경 | typecheck/test(89)/build 통과 |
+| 2026-09-17 | OpenCode | PHASE-B1: GRDP 적재·dataset-keyed·카탈로그 2행 등록 | 미커밋 로컬 변경 | typecheck/test(89)/build 통과, 실측 조인 3건 통과 |
+| 2026-09-17 | OpenCode | PHASE-B2: 4종 적재·연평균 집계·ready 7개 | 미커밋 로컬 변경 | typecheck/test(92)/build 통과, 실측 조인 4건 통과 |
 
 ## 15. 문서 기준 우선순위
 
