@@ -55,7 +55,8 @@ interface VwMap3D {
   setNavigationZoomVisible?(visible: boolean): void;
   start?(): void;
   destroy?(): void;
-  updateSize?(): void;
+  /** 엔진 native 리사이즈. 너비·높이를 직접 넘겨야 컨테이너를 채운다. */
+  updateSize?(width: number, height: number): void;
 }
 
 interface VwNamespace3D {
@@ -213,7 +214,7 @@ export function getViewer(): Ws3dViewer | null {
 
 export interface VWorld3DMap {
   viewer: Ws3dViewer;
-  refreshSize(): void;
+  refreshSize(width: number, height: number): void;
   dispose(): void;
 }
 
@@ -281,14 +282,15 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
   }
     return {
       viewer,
-      refreshSize() {
+      refreshSize(width: number, height: number) {
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
         try {
-          viewer.resize?.();
+          map.updateSize?.(Math.round(width), Math.round(height));
         } catch {
           /* ignore */
         }
         try {
-          map.updateSize?.();
+          viewer.resize?.();
         } catch {
           /* ignore */
         }

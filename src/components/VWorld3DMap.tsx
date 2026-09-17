@@ -111,8 +111,12 @@ export function VWorld3DMap() {
           handle = created;
         }
         renderMode(handle, boundaryResult.data, snapshotResult, modeRef.current, heightScaleRef.current);
-        handle.refreshSize();
-        window.setTimeout(() => mapRef.current?.refreshSize(), 1000);
+        if (mapElementRef.current) {
+          handle.refreshSize(mapElementRef.current.clientWidth, mapElementRef.current.clientHeight);
+        }
+        window.setTimeout(() => {
+          if (mapElementRef.current) mapRef.current?.refreshSize(mapElementRef.current.clientWidth, mapElementRef.current.clientHeight);
+        }, 1000);
         setStatus("ready");
       })
       .catch((failure) => {
@@ -181,7 +185,7 @@ export function VWorld3DMap() {
     const element = mapElementRef.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
-      mapRef.current?.refreshSize();
+      mapRef.current?.refreshSize(element.clientWidth, element.clientHeight);
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -189,8 +193,9 @@ export function VWorld3DMap() {
 
   useEffect(() => {
     const handle = mapRef.current;
-    if (!handle) return;
-    handle.refreshSize();
+    const element = mapElementRef.current;
+    if (!handle || !element) return;
+    handle.refreshSize(element.clientWidth, element.clientHeight);
   });
 
   useEffect(() => {

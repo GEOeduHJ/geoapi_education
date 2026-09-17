@@ -149,9 +149,9 @@ h3 { margin-bottom: 8px; font-size: 18px; letter-spacing: -.035em; }
 .vworld-map-frame--3d .naviBottomPannel,
 .vworld-map-frame--3d #naviTopPannel3d,
 .vworld-map-frame--3d #naviBottomPannel3d,
-.vworld-map-frame--3d .BottomLogo,
-.vworld-map-frame--3d .bottomLogo,
-.vworld-map-frame--3d #mapToolBar,
+.vworld-map-frame--3d #footer3d,
+.vworld-map-frame--3d .apifooter,
+.vworld-map-frame--3d #api-mapInfo,
 .vworld-map-frame--3d .compassVisible { display: none !important; }
 .vworld-map-legend { right: 17px; bottom: 15px; flex-wrap: wrap; justify-content: end; }
 .vworld-map-legend__area { width: 10px; height: 10px; display: inline-block; border: 1px solid rgba(15,91,96,.8); background: rgba(15,139,141,.14); }
