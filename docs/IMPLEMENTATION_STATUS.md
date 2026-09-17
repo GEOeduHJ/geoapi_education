@@ -10,6 +10,9 @@
 - KMA 2D 첫 수직 슬라이스를 구현함: Supabase 기후자료 조회 조건을 기준으로 지점값 색상/크기, 비교 그래프, 표, PNG/PDF export를 연결함.
 - SGIS 2025 시도 경계 필터를 추가함. 선택 지역은 지도·경계 조인·KMA 지점·그래프/표 범위에 같은 상태로 전달함.
 - `supabase/migrations/0006_dataset_catalog.sql`을 추가함. 공개 카탈로그는 `status='published'`만 anon/authenticated에게 읽히고, 브라우저 쓰기는 허용하지 않음. 현재 정적 catalog는 migration 적용 전에도 화면을 검증할 수 있는 fallback임.
+- 운영 URL `https://geoapieducation.vercel.app/create/2d/domestic`에서 17개 SGIS 경계·10개 KMA 관측소·10개 지점값·2016-01-01~2025-12-31 자료 범위를 확인함. `서울특별시` 선택 시 지도 1개 경계·1개 지점·그래프/표 1개 행으로 함께 제한됨.
+- 운영 `/create/2d/world`에서 World Bank·Open-Meteo·USGS가 준비 중 catalog로 표시되고, 실제 snapshot 전에는 지도·값을 임의로 렌더링하지 않음을 확인함.
+- 운영 브라우저 오류/경고 로그는 비어 있었다. 로컬 Vite에서는 Vercel serverless 함수가 실행되지 않아 SGIS 경계만 운영 URL에서 검증함.
 
 ## 이번 단계에서 완료한 것
 

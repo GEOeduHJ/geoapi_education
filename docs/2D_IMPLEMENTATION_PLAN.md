@@ -191,8 +191,8 @@ npm run build
 
 | 단계 | 상태 | 다음 산출물 |
 |---|---|---|
-| Phase 0 | 진행 중 | 공통 타입·카탈로그 계약 |
-| Phase 1 | 시작 | KMA 2D 지도·그래프·표·경계 필터 |
+| Phase 0 | 1차 완료 | KOSIS/세계 adapter와 공통 시각화 타입 확장 |
+| Phase 1 | 진행 중 | provenance 패널·DB coverage 선택·공통 export/표 계약 보강 |
 | Phase 2 | 대기 | KOSIS 승인 snapshot과 실제 주제도 |
 | Phase 3 | 대기 | World Bank 세계 자료 |
 | Phase 4 | 대기 | 확장 provider adapters |
