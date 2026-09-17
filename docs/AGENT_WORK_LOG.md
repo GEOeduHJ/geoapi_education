@@ -289,7 +289,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: 클릭→좌표 변환은 브라우저 확인 필요. 키·원문 비밀값 기록 없음
 - 차단/주의: EV data.go.kr 일일한도 (429) — 내일 `node scripts/ev-snapshot.mjs --write` 재개
 - 다음 작업: EV 적재 재개 → 세계 5종
-- 커밋: 미커밋 로컬 변경
+- 커밋: `8ba1bf7 feat: short-term forecast click lookup and EV ingest script`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 

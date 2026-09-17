@@ -461,7 +461,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 | 2026-09-17 | OpenCode | PHASE-D: 에어코리아 적재·provider 일반화·ready 8개 | `fdac808` | typecheck/test(103)/build 통과, 실측 fan-out 통과 |
 | 2026-09-17 | OpenCode | PHASE-E: TourAPI 17 snapshots·POI 파이프라인·ready 9개 | `fdac808` | typecheck/test(109)/build 통과, 실측 POI 통과 |
-| 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | 미커밋 로컬 변경 | typecheck/test(115)/build 통과, 프록시 실측 통과 |
+| 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | `8ba1bf7` | typecheck/test(115)/build 통과, 프록시 실측 통과 |
 
 ## 15. 문서 기준 우선순위
 
