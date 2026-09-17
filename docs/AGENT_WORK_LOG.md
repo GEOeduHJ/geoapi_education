@@ -256,7 +256,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: KOSIS API 실측. 키·원문 비밀값 기록 없음. 화면 렌더는 배포 후 확인
 - 차단/주의: 없음
 - 다음 작업: 배포 후 지표·산업·연도 전환 렌더 확인
-- 커밋: 미커밋 로컬 변경
+- 커밋: `f008dff feat: indicator and industry selectors with 27 public snapshots`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 

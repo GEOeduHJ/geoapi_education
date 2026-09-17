@@ -439,8 +439,8 @@ git log --oneline -5
 
 **검증:** typecheck/test(100)/build 통과. 27개 snapshot 전수·27개 indicators 연결 확인. 실측 조인: 제조업 2024 17/17 포함 통과.
 
-| 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과 |
-| 2026-09-17 | OpenCode | PHASE-C: 21개 지표 적재·지표/산업 셀렉터 | 미커밋 로컬 변경 | typecheck/test(100)/build 통과, 전수 실측 통과 |
+| 2026-09-17 | OpenCode | VIZ-TYPE: 지표 세분화 유형화 + 지도 크기 조절 (미커밋) | `f008dff` | typecheck/test(94)/build 통과 |
+| 2026-09-17 | OpenCode | PHASE-C: 21개 지표 적재·지표/산업 셀렉터 | `f008dff` | typecheck/test(100)/build 통과, 전수 실측 통과 |
 | 2026-09-17 | OpenCode | NGII-BASEMAP: 교육용 백지도 WMTS 옵션 (키 미활성, 브라우저 확인 대기) | 미커밋 로컬 변경 | typecheck/test(94)/build 통과, dev 서버 200 확인 |
 
 ## 15. 문서 기준 우선순위
