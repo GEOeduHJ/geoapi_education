@@ -300,7 +300,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: WB·jsdelivr 실측. 키 없음. 세계 렌더는 배포 후 확인
 - 차단/주의: 없음
 - 다음 작업: 배포 후 세계 렌더 확인 (USGS·Open-Meteo는 후속)
-- 커밋: 미커밋 로컬 변경
+- 커밋: `ebe173d feat: world country choropleth with World Bank density`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
