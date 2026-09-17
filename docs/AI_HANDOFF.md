@@ -489,6 +489,7 @@ git log --oneline -5
 | 2026-09-18 | OpenCode | 3D-01e: 단계별 진단 에러 (막힌 지점 식별용) | `f1b090e` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-01f: start 전 초기화 순서 완성 | `df31afe` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-01g: start 원본 에러 노출 (원인 식별용) | `9910dec` | typecheck/test(139)/build 통과 |
+| 2026-09-18 | OpenCode | 3D-01h: jQuery 선행 로드 ($ is not defined) | `7d540c3` | typecheck/test(139)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 

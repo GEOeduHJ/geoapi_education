@@ -379,6 +379,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `df31afe fix: complete 3D init sequence before start`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-01h jQuery 선행 로드
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts` (VWorld 배포 jQuery 1.11.3을 엔진보다 먼저 로드)
+- 결정/데이터: Production 문구 "$ is not defined"로 확정. 엔진이 호스트 jQuery를 전제로 하며 2D 로더 설정을 그대로 사용
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: jQuery URL 200 실측. 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: `7d540c3 fix: load jQuery before 3D engine scripts`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
