@@ -412,6 +412,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `da81e15 fix: hide 3D engine widgets and refresh canvas size`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-02c native 리사이즈·footer 차단
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts`(`updateSize(w,h)` 전달), `src/components/VWorld3DMap.tsx`(컨테이너 실측 전달), `src/app/styles.css`(`#footer3d`·`.apifooter`·`#api-mapInfo` 차단)
+- 결정/데이터: 엔진 JS에서 `updateSize(w,h)`와 footer DOM 구조 직접 확인. 이전 viewer.resize는 해당 API가 없어 무연산이었음
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 엔진 JS 실측. 렌더 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: `77f64e6 fix: 3D native resize with container size and footer selectors`에 포함 (origin/main push済)
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]

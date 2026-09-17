@@ -492,6 +492,7 @@ git log --oneline -5
 | 2026-09-18 | OpenCode | 3D-01h: jQuery 선행 로드 ($ is not defined) | `7d540c3` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-02: 위젯 정리·지진 기둥·자료 전환 | `75486e7` | typecheck/test(139)/build 통과 |
 | 2026-09-18 | OpenCode | 3D-02b: 엔진 위젯 CSS 차단·캔버스 리사이즈 | `da81e15` | typecheck/test(139)/build 통과 |
+| 2026-09-18 | OpenCode | 3D-02c: native updateSize + footer 실셀렉터 | `77f64e6` | typecheck/test(139)/build 통과 |
 
 ## 15. 문서 기준 우선순위
 
