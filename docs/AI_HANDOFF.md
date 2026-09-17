@@ -370,7 +370,15 @@ KOSIS 후보 `101 / DT_1YL21281 / T10 / 2025`의 DRY-RUN은 응답을 확인했�
 
 World Bank 이후 Open-Meteo 도시 기후, USGS 지진, OpenTopoData 고도, GBIF/POI 자료를 수업 주제별로 하나씩 추가한다. 각 provider는 실제 license·호출 조건·snapshot 주기를 문서화하고, 데이터가 없는 상태에서는 planned UI만 제공한다.
 
-### 3D-01 — 2D 완료 gate 검토 후 착수
+### 3D-01 — VWorld 3D 프리즘 지도 첫 슬라이스 (완료, 2026-09-17)
+
+**전제:** 2D gate의 브라우저 검증이 끝나지 않은 상태에서 사용자 지시로 착수. 렌더 검증이 밀려 있으므로 3D도 브라우저 확인이 필수 잔여다.
+
+**완료 내용:** `src/lib/vworld3d.ts` 신규(3D 로더·WGS84 변환·모식 높이·Cesium 압출·카메라 프리셋, 2D 번들과 분리). `src/components/VWorld3DMap.tsx` 신규(공원 2025 17시도 기둥·높이 과장 선택·조감/수직 카메라·모식도 고지·2D 폴백 링크). `/create/3d` 연결. 2D와 같은 색상 팔레트·같은 snapshot·같은 조인 사용.
+
+**검증:** typecheck/test(139)/build 통과. 3D 로더 HTTP 200 확인. **미검증:** 실제 렌더·압출·카메라·도형 정합 (브라우저에서 확인 필요). 확인 전에는 gate 통과로 보지 않는다.
+
+### 2D 완료 gate (미통과 — 3D 선행 착수 기록)
 
 다음 조건을 모두 검토하고 인계 문서에서 체크한 뒤에만 시작한다.
 
@@ -474,6 +482,7 @@ git log --oneline -5
 | 2026-09-17 | OpenCode | PHASE-F: 단기예보 클릭 조회 (+EV 한도 대기) | `8ba1bf7` | typecheck/test(115)/build 통과, 프록시 실측 통과 |
 | 2026-09-17 | OpenCode | 2D-04: 세계 국가경계·WB 인구밀도·world UI | `ebe173d` | typecheck/test(122)/build 통과, 실측 조인 통과 |
 | 2026-09-17 | OpenCode | WORLD-2: 지진·기후·고도·생태 4종 | `2b4afca` | typecheck/test(135)/build 통과, 실측 통과 |
+| 2026-09-17 | OpenCode | 3D-01: 프리즘 지도 첫 슬라이스 (렌더 미검증) | 미커밋 로컬 변경 | typecheck/test(139)/build 통과, 로더 200 확인 |
 
 ## 15. 문서 기준 우선순위
 

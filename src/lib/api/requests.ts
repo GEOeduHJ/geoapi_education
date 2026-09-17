@@ -48,6 +48,15 @@ export function buildVWorldLoaderUrl(
   return url.toString();
 }
 
+/** VWorld WebGL 3D loader (Cesium 기반). 2D 로더와 다른 스크립트다. */
+export function buildVWorld3DLoaderUrl(apiKey: string, domain: string): string {
+  const url = new URL("https://map.vworld.kr/js/webglMapInit.js.do");
+  url.searchParams.set("version", "3.0");
+  url.searchParams.set("apiKey", apiKey);
+  url.searchParams.set("domain", domain);
+  return url.toString();
+}
+
 export function buildSgisAuthUrl(
   endpoint: string,
   consumerKey: string,

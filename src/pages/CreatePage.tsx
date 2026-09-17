@@ -4,6 +4,7 @@ import { Climate2DWorkspace, DEFAULT_CLIMATE_FROM, DEFAULT_CLIMATE_TO, useClimat
 import { ClimateComparison } from "../components/ClimateComparison";
 import { DatasetSelector } from "../components/DatasetSelector";
 import { ForecastPanel, type ForecastResult } from "../components/ForecastPanel";
+import { VWorld3DMap } from "../components/VWorld3DMap";
 import { MaterialExportActions } from "../components/MaterialExportActions";
 import { KosisPublicSnapshotPanel, type KosisPanelStatus } from "../components/KosisPublicSnapshotPanel";
 import { Snapshot2DWorkspace } from "../components/Snapshot2DWorkspace";
@@ -437,10 +438,8 @@ export function MapCreatePage({ dimension, scope = "domestic" }: { dimension: "2
 
       <section className="workspace-grid">
         {isThreeD ? (
-          <div className="map-stage map-stage--empty">
-            <div className="map-stage__grid" />
-            <div className="map-stage__center"><span className="map-stage__pin">＋</span><strong>3D 렌더러 연결 대기</strong><p>2D 국내·세계 지도에서 실제 자료의 지도·그래프·표 계약을 먼저 완성합니다.</p></div>
-            <div className="map-controls"><button type="button">＋</button><button type="button">−</button><button type="button">⌖</button></div>
+          <div className="map-stage map-stage--live" ref={mapExportRef}>
+            <VWorld3DMap />
           </div>
         ) : (
           <div className="map-stage map-stage--live" ref={mapExportRef}>

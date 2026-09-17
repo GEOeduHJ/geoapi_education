@@ -313,6 +313,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: 배포 후 세계 렌더 확인
 - 커밋: `2b4afca feat: world batch two with quakes, city climate, terrain and species`에 포함 (origin/main push済)
 
+### 2026-09-17 — OpenCode — 3D-01 프리즘 지도 첫 슬라이스
+
+- 결과: 부분 완료 (구현済, 렌더 미검증)
+- 변경: `src/lib/vworld3d.ts`+테스트(신규), `src/components/VWorld3DMap.tsx`(신규), `src/lib/api/requests.ts`(3D 로더), `src/pages/CreatePage.tsx`(3D 분기 연결), `docs/AI_HANDOFF.md`(gate 미통과 명시)
+- 결정/데이터: 사용자 지시로 gate 전 착수. VWorld 3D=Cesium 기반, 동일 키·도메인. 공원 2025 17시도 기둥, 2D 팔레트·snapshot·조인 재사용. 높이는 모식도(50/100/200km 과장 선택)임을 화면에 고지
+- 검증: typecheck/test(139)/build 통과. 3D 로더 HTTP 200. 실제 렌더·압출·카메라는 브라우저 확인 필요
+- 브라우저/API: VWorld 3D 가이드·로더 실측. 키 값 기록 없음
+- 차단/주의: gate 미통과 상태. 렌더 확인 전까지 gate 통과로 보지 않음
+- 다음 작업: Production `/create/3d` 렌더·기둥·카메라 확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
