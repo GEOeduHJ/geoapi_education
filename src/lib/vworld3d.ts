@@ -27,6 +27,7 @@ interface CesiumNamespace {
   Cartesian3: {
     fromDegreesArray(coordinates: number[]): unknown;
     fromDegrees(lon: number, lat: number, height?: number): unknown;
+    new (x: number, y: number, z: number): unknown;
   };
   Color: {
     fromCssColorString(css: string): { withAlpha(alpha: number): unknown };
@@ -240,20 +241,20 @@ export async function createVWorld3DMap(containerId: string): Promise<VWorld3DMa
   }
   try {
     const initPosition = new namespace.CameraPosition(
-      new namespace.CoordZ(127.9, 36.3, 1_100_000),
-      new namespace.Direction(0, -45, 0),
+      new namespace.CoordZ(127.9, 36.4, 1_500_000),
+      new namespace.Direction(0, -50, 0),
     );
     map.setOption?.({
       mapId: containerId,
       initPosition,
-      logo: true,
-      navigation: true,
+      logo: false,
+      navigation: false,
     });
     map.setMapId?.(containerId);
     // 문서 순서대로 초기 위치·표시를 setter로도 확정한다 (start() 선행 조건).
     map.setInitPosition?.(initPosition);
-    map.setLogoVisible?.(true);
-    map.setNavigationZoomVisible?.(true);
+    map.setLogoVisible?.(false);
+    map.setNavigationZoomVisible?.(false);
   } catch {
     throw new Error("초기 위치 설정에 실패했습니다.");
   }
@@ -327,6 +328,49 @@ export function addPrisms(
       } catch {
         /* skip broken rings */
       }
+    }
+  }
+  return added;
+}
+
+/** 지진 진앙 등 점 자료를 세로 막대로 세운다. 높이는 값 상대 비교용 모식도다. */
+export interface PillarInput {
+  id: string;
+  lon: number;
+  lat: number;
+  value: number;
+  label: string;
+}
+
+export function addPillars(
+  map: VWorld3DMap,
+  points: PillarInput[],
+  range: PrismHeight,
+  colorFor: (value: number, min: number, max: number) => string,
+  widthMeters = 9000,
+): number {
+  const cesium = getCesium();
+  if (!cesium) return 0;
+  map.viewer.entities.removeAll();
+  let added = 0;
+  for (const point of points) {
+    if (!Number.isFinite(point.value)) continue;
+    const height = Math.max(valueToPrismHeight(point.value, range), 5000);
+    const css = colorFor(point.value, range.min, range.max);
+    try {
+      map.viewer.entities.add({
+        name: `${point.label} · ${point.value}`,
+        position: cesium.Cartesian3.fromDegrees(point.lon, point.lat, height / 2),
+        box: {
+          dimensions: new cesium.Cartesian3(widthMeters, widthMeters, height),
+          material: cesium.Color.fromCssColorString(css).withAlpha(0.85),
+          outline: true,
+          outlineColor: cesium.Color.fromCssColorString(css).withAlpha(0.95),
+        },
+      });
+      added += 1;
+    } catch {
+      /* skip broken points */
     }
   }
   return added;

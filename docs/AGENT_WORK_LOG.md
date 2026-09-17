@@ -390,6 +390,17 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 다음 작업: Production `/create/3d` 재확인
 - 커밋: `7d540c3 fix: load jQuery before 3D engine scripts`에 포함 (origin/main push済)
 
+### 2026-09-18 — OpenCode — 3D-02 위젯 정리·지진 기둥
+
+- 결과: 완료 (브라우저 재확인 대기)
+- 변경: `src/lib/vworld3d.ts`(위젯 미표시·카메라 조정·`addPillars`), `src/components/VWorld3DMap.tsx`(자료 선택: 공원 기둥/지진 기둥)
+- 결정/데이터: 사용자 피드백 반영. VWorld 기본 버튼군은 숨기고 카메라 2종만 유지. 경계 외 3D로 USGS 896건 기둥(규모 색상·높이, USGS snapshot 재사용). 초기 카메라 고도 상향
+- 검증: typecheck/test(139)/build 통과
+- 브라우저/API: 미확인
+- 차단/주의: 없음
+- 다음 작업: Production `/create/3d` 재확인
+- 커밋: 미커밋 로컬 변경
+
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
 - 결과: [완료|부분 완료|차단]
