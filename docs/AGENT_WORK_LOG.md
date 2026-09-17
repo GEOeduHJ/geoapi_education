@@ -224,7 +224,7 @@ Codex·Claude·OpenCode가 교대로 수행한 작업을 append-only로 기록�
 - 브라우저/API: Esri 타일 서버 실측(HTTP 200). 키 없음
 - 차단/주의: 없음
 - 다음 작업: 브라우저에서 밝은 회색지도 선택·주제도 겹침·출처 표시 확인
-- 커밋: 미커밋 로컬 변경
+- 커밋: `fb3314a feat: Esri light gray canvas basemap option`에 포함 (origin/main push済)
 
 ### 2026-09-17 — [Codex|Claude|OpenCode] — [TASK-ID]
 
